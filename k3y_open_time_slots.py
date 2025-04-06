@@ -154,7 +154,7 @@ def find_gaps(data, required_ranges):
                         gap_label: f"{gap_start_local} - {gap_end_local}"
                     })
 
-    return gaps
+    return gaps  # remove this to run in standalone mode from the terminal prompt
 
 # Main function to fetch data, find gaps, and display results
 def main():
@@ -165,6 +165,8 @@ def main():
 
     # Sort the gaps by date and UTC time
     gaps.sort(key=lambda x: (x['Date'], datetime.strptime(x['Open Slot (UTC)'].split(' ')[0], "%H:%M")))
+
+    return gaps
 
     # Print results
     if gaps:
