@@ -1,11 +1,11 @@
 import requests
-from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
+from html.parser import HTMLParser
 
 # Load settings from settings.ini
 def load_settings():
     settings = {}
-    with open('ham_radio/settings.ini', 'r') as file:
+    with open('settings.ini', 'r') as file:
         exec(file.read(), settings)
     return settings
 
@@ -20,12 +20,6 @@ LOCAL_DAY_END = settings['LOCAL_DAY_END']
 
 # URL and area for K3Y data
 URL = 'https://www.skccgroup.com/k3y/slot_list.php'
-
-#K3Y_AREA = 'K3Y/9'
-# Time zone settings
-#TIME_ZONE_ABBR = "CST"  # Change as needed
-#LOCAL_DAY_START = "07:00"  # Local start of desired time range
-#LOCAL_DAY_END = "23:00"    # Local end of desired time range
 
 # Valid U.S. time zone abbreviations and their UTC offsets
 VALID_TIME_ZONES = {
@@ -65,28 +59,47 @@ def convert_to_local(utc_time_str, time_zone_abbr):
     except ValueError:
         return None
 
-# Fetch K3Y data from the website and parse the table
+# Fetch K3Y data from the website and parse the table manually
 def fetch_k3y_data(url, area):
     response = requests.get(url)  # Send a request to fetch the page
-    soup = BeautifulSoup(response.content, 'html.parser')  # Parse the HTML content
-    table = soup.find('table')  # Find the table containing the slots
-    data = []
+    html_content = response.content.decode('utf-8')  # Decode to string
 
-    # Parse each row in the table, starting from the second row (skip header)
-    if table:
-        rows = table.find_all('tr')
-        for row in rows[1:]:
-            cells = row.find_all('td')
+    # Extract the table rows using a simple regular expression
+    rows = []
+    table_start = html_content.find('<table')
+    table_end = html_content.find('</table>', table_start)
+    if table_start != -1 and table_end != -1:
+        table_html = html_content[table_start:table_end]
+        row_start = 0
+        while True:
+            row_start = table_html.find('<tr>', row_start)
+            if row_start == -1:
+                break
+            row_end = table_html.find('</tr>', row_start)
+            row_html = table_html[row_start + 4:row_end]  # Extract the row (skip <tr>)
+            cells = []
+            cell_start = 0
+            while True:
+                cell_start = row_html.find('<td>', cell_start)
+                if cell_start == -1:
+                    break
+                cell_end = row_html.find('</td>', cell_start)
+                cell_html = row_html[cell_start + 4:cell_end]  # Extract the cell (skip <td>)
+                cells.append(cell_html.strip())
+                cell_start = cell_end + 5  # Move to the next cell
+            # Ensure there are exactly 4 columns in the row
             if len(cells) >= 4:
-                date = cells[0].text.strip().upper()  # Extract date
-                start_time = cells[1].text.strip().upper()  # Extract start time
-                end_time = cells[2].text.strip().upper()  # Extract end time
-                k3y_area = cells[3].text.strip().upper()  # Extract area
-
+                date = cells[0]
+                start_time = cells[1]
+                end_time = cells[2]
+                k3y_area = cells[3]
                 # Only keep rows that match the desired K3Y area
                 if area in k3y_area:
-                    data.append((date, start_time, end_time))
-    return data
+                    rows.append((date, start_time, end_time, k3y_area))
+
+            row_start = row_end + 5  # Move to the next row
+
+    return rows
 
 # Generate a list of full hour time slots between start_time and end_time
 def generate_hours(start_time, end_time):
@@ -112,7 +125,7 @@ def find_gaps(data, required_ranges):
     daily_hours = {}
 
     # Update daily hours with scheduled slots
-    for date, start, end in data:
+    for date, start, end, area in data:
         if date not in daily_hours:
             daily_hours[date] = set()
         hours = generate_hours(start, end)  # Generate blocked hours
