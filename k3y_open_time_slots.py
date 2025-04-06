@@ -1,13 +1,25 @@
 import requests
 from datetime import datetime, timedelta
 from html.parser import HTMLParser
+import json
 
-# Load settings from settings.ini
+# Load settings from settings.json
 def load_settings():
-    settings = {}
-    with open('settings.ini', 'r') as file:
-        exec(file.read(), settings)
+    try:
+        with open('settings.json', 'r') as f:
+            settings = json.load(f)
+    except FileNotFoundError:
+        # Handle the case when settings.json is not found
+        settings = {}
+
+    # Provide default values for missing keys
+    settings.setdefault('TIME_ZONE_ABBR', 'EST')
+    settings.setdefault('K3Y_AREA', 'K3Y/0')
+    settings.setdefault('LOCAL_DAY_START', '08:00')
+    settings.setdefault('LOCAL_DAY_END', '22:00')
+
     return settings
+
 
 # Load configuration
 settings = load_settings()
@@ -120,16 +132,17 @@ def generate_hours(start_time, end_time):
     return hours
 
 # Find gaps between scheduled times based on required ranges
-def find_gaps(data, required_ranges):
+def find_gaps(data, required_ranges, time_zone_abbr, area):  # Add `area` as a parameter
     # Initialize a dictionary to track scheduled hours by date
     daily_hours = {}
 
     # Update daily hours with scheduled slots
-    for date, start, end, area in data:
-        if date not in daily_hours:
-            daily_hours[date] = set()
-        hours = generate_hours(start, end)  # Generate blocked hours
-        daily_hours[date].update(hours)
+    for date, start, end, k3y_area in data:  # Ensure `k3y_area` is used here
+        if k3y_area == area:  # Filter by the selected area
+            if date not in daily_hours:
+                daily_hours[date] = set()
+            hours = generate_hours(start, end)  # Generate blocked hours
+            daily_hours[date].update(hours)
 
     gaps = []
 
@@ -144,17 +157,18 @@ def find_gaps(data, required_ranges):
                 if hour in open_slots:
                     start_time = datetime.strptime(hour, "%H:%M")
                     end_time = start_time + timedelta(hours=1)  # Calculate end time
-                    gap_start_local = convert_to_local(hour, TIME_ZONE_ABBR)  # Convert to local time
-                    gap_end_local = convert_to_local(end_time.strftime("%H:%M"), TIME_ZONE_ABBR)  # Convert to local time
+                    gap_start_local = convert_to_local(hour, time_zone_abbr)  # Convert to local time
+                    gap_end_local = convert_to_local(end_time.strftime("%H:%M"), time_zone_abbr)  # Convert to local time
 
-                    gap_label = f"Open Slot ({TIME_ZONE_ABBR})"
+                    gap_label = f"Open Slot ({time_zone_abbr})"
                     gaps.append({
                         "Date": f"{date}",
                         "Open Slot (UTC)": f"{hour} - {end_time.strftime('%H:%M')} UTC",
                         gap_label: f"{gap_start_local} - {gap_end_local}"
                     })
 
-    return gaps  # remove this to run in standalone mode from the terminal prompt
+    return gaps  # return gaps as usual
+
 
 # Main function to fetch data, find gaps, and display results
 def main():
