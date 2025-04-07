@@ -2,6 +2,17 @@ import requests
 from datetime import datetime, timedelta
 from html.parser import HTMLParser
 import json
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("k3y_slots.log"),
+        logging.StreamHandler()
+    ]
+)
 
 # Load settings from settings.json
 def load_settings():
@@ -10,16 +21,19 @@ def load_settings():
             settings = json.load(f)
     except FileNotFoundError:
         # Handle the case when settings.json is not found
-        settings = {}
+        #settings = {}
+        
+        logging.info("Loading default settings - JSON file missing")
 
-    # Provide default values for missing keys
-    settings.setdefault('TIME_ZONE_ABBR', 'EST')
-    settings.setdefault('K3Y_AREA', 'K3Y/0')
-    settings.setdefault('LOCAL_DAY_START', '08:00')
-    settings.setdefault('LOCAL_DAY_END', '22:00')
+        # Provide default values for missing keys
+        settings.setdefault('TIME_ZONE_ABBR', 'EST')
+        settings.setdefault('K3Y_AREA', 'K3Y/0')
+        settings.setdefault('LOCAL_DAY_START', '08:00')
+        settings.setdefault('LOCAL_DAY_END', '22:00')
+        return settings
 
+    logging.info("Loading settings from settings.json")
     return settings
-
 
 # Load configuration
 settings = load_settings()
@@ -73,8 +87,17 @@ def convert_to_local(utc_time_str, time_zone_abbr):
 
 # Fetch K3Y data from the website and parse the table manually
 def fetch_k3y_data(url, area):
-    response = requests.get(url)  # Send a request to fetch the page
-    html_content = response.content.decode('utf-8')  # Decode to string
+    logging.info("Fetching data from website")
+
+    try:
+        response = requests.get(url, timeout=10) # Send a request to fetch the page
+        html_content = response.content.decode('utf-8')  # Decode to string
+        response.raise_for_status()  # Raise exception for 4XX/5XX responses
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to fetch data: {str(e)}")
+        logging.info("Failed to fetch data from website")
+        return []
+
 
     # Extract the table rows using a simple regular expression
     rows = []
@@ -110,6 +133,8 @@ def fetch_k3y_data(url, area):
                     rows.append((date, start_time, end_time, k3y_area))
 
             row_start = row_end + 5  # Move to the next row
+    
+    logging.debug(f"Processing {len(rows)} rows")
 
     return rows
 
@@ -177,8 +202,6 @@ def main():
                         convert_to_utc(LOCAL_DAY_END, TIME_ZONE_ABBR))]  # Required time range in UTC
     #gaps = find_gaps(data, required_ranges)  # Find gaps in the data
     gaps = find_gaps(data, required_ranges, TIME_ZONE_ABBR, K3Y_AREA) # Find gaps in the data
-
-
 
     # Sort the gaps by date and UTC time
     gaps.sort(key=lambda x: (x['Date'], datetime.strptime(x['Open Slot (UTC)'].split(' ')[0], "%H:%M")))
