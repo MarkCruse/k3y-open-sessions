@@ -13,6 +13,31 @@ The app allows users to select a specific area, time zone, and displays availabl
 - **Download Available Slots**: Export available time slots to a CSV file.
 - **Save Settings**: Save the time zone, K3Y area, and start/end time preferences for future use.
 
+## File Analysis
+
+### k3y_open_time_slots.py  
+This is the core logic file that:  
+
+- Loads settings from a settings.json file
+- Converts between UTC and local time zones
+- Fetches K3Y slot data from the SKCC website
+- Identifies open time slots based on user preferences
+
+### dashboard.py
+This is the Streamlit interface that:
+
+- Provides a user-friendly web UI for the slot finder
+- Allows users to select time zones, K3Y areas, and preferred hours
+- Displays available slots in a table
+- Offers CSV export and clipboard copying features
+
+### Key Features:
+
+- Settings sidebar with configuration options
+- Data caching to reduce web scraping frequency
+- Editable data table to select desired slots
+- Export functionality for sharing selected slots
+
 ## Installation
 
 To get started with K3Y Open Slot Finder, follow these steps:
