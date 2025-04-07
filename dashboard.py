@@ -10,8 +10,8 @@ from k3y_open_time_slots import (
 # Page configuration
 st.set_page_config(
     page_title="K3Y Open Slot Finder",
-    page_icon="📻",
-    layout="wide"
+    page_icon="📅",
+    layout="centered"
 )
 
 # Load settings from file
@@ -119,6 +119,25 @@ if gaps:
 
     edited_df = st.data_editor(
         gaps_data,
+        column_config={
+            "Select": st.column_config.CheckboxColumn(
+                "Select",
+                help="Select time slots to copy",
+                width="small",
+            ),
+            "Date": st.column_config.TextColumn(
+                "Date",
+                width="small",
+            ),
+            "UTC": st.column_config.TextColumn(
+                "UTC Time",
+                width="medium",
+            ),
+            local_col: st.column_config.TextColumn(
+                local_col,
+                width="medium",
+            )
+        },   
         use_container_width=True,
         num_rows="fixed",
         hide_index=True,
@@ -168,7 +187,5 @@ else:
 st.sidebar.markdown("---")
 st.sidebar.markdown("### About")
 st.sidebar.markdown("""
-This tool helps you find open time slots for K3Y operations.
-Select your preferred time zone, K3Y area, and operating hours 
-to find available slots.
+This tool helps you identify available time slots for K3Y operations. Simply choose your time zone, K3Y call area, and preferred operating hours to view open times. You can also select specific slots, copy them to your clipboard, and paste them into an email to your area coordinator or scheduler to request those dates and times.
 """)

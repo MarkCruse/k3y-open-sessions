@@ -190,7 +190,7 @@ def find_gaps(data, required_ranges, time_zone_abbr, area):
 
                     gap_label = f"Open Slot ({time_zone_abbr})"
                     gaps.append({
-                        "Date": f"{date}",
+                        "Date": f"1-{date}",
                         "Open Slot (UTC)": f"{hour} - {end_time.strftime('%H:%M')} UTC",
                         gap_label: f"{gap_start_local} - {gap_end_local}"
                     })
