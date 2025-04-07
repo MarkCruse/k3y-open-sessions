@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from html.parser import HTMLParser
 import json
 import logging
+import streamlit as st
 
 # Configure logging
 logging.basicConfig(
@@ -15,24 +16,21 @@ logging.basicConfig(
 )
 
 # Load settings from settings.json
+@st.cache_data(ttl=600)     # Cache settings to avoid reloading on each rerun
 def load_settings():
     try:
         with open('settings.json', 'r') as f:
             settings = json.load(f)
     except FileNotFoundError:
-        # Handle the case when settings.json is not found
-        #settings = {}
-        
         logging.info("Loading default settings - JSON file missing")
-
-        # Provide default values for missing keys
-        settings.setdefault('TIME_ZONE_ABBR', 'EST')
-        settings.setdefault('K3Y_AREA', 'K3Y/0')
-        settings.setdefault('LOCAL_DAY_START', '08:00')
-        settings.setdefault('LOCAL_DAY_END', '22:00')
-        return settings
-
-    logging.info("Loading settings from settings.json")
+        settings = {
+            'TIME_ZONE_ABBR': 'EST',
+            'K3Y_AREA': 'K3Y/0',
+            'LOCAL_DAY_START': '08:00',
+            'LOCAL_DAY_END': '22:00'
+        }
+    
+    logging.info("Settings loaded")
     return settings
 
 # Load configuration
@@ -86,6 +84,8 @@ def convert_to_local(utc_time_str, time_zone_abbr):
         return None
 
 # Fetch K3Y data from the website and parse the table manually
+# Cache the API call to prevent repeated network requests
+@st.cache_data(ttl=3600)  # Cache for 1 hour
 def fetch_k3y_data(url, area):
     logging.info("Fetching data from website")
 
