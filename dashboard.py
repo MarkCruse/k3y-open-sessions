@@ -4,7 +4,7 @@ import io
 import datetime
 from k3y_open_time_slots import load_settings, fetch_k3y_data, find_gaps, convert_to_utc, convert_to_local
 import json
-import pyperclip  # Import pyperclip for clipboard copying
+import pyperclip  # for clipboard copying
 
 # Load settings from file
 settings = load_settings()
@@ -141,7 +141,7 @@ if gaps:
 
     csv_data = convert_to_csv(gaps_data)
     st.download_button(
-        label="📥 Download CSV",
+        label="📥 Download table to CSV file",
         data=csv_data,
         file_name="k3y_open_slots.csv",
         mime="text/csv"
