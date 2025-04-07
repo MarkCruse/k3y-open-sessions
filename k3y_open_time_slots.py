@@ -175,7 +175,10 @@ def main():
     data = fetch_k3y_data(URL, K3Y_AREA)  # Fetch K3Y data from the website
     required_ranges = [(convert_to_utc(LOCAL_DAY_START, TIME_ZONE_ABBR), 
                         convert_to_utc(LOCAL_DAY_END, TIME_ZONE_ABBR))]  # Required time range in UTC
-    gaps = find_gaps(data, required_ranges)  # Find gaps in the data
+    #gaps = find_gaps(data, required_ranges)  # Find gaps in the data
+    gaps = find_gaps(data, required_ranges, TIME_ZONE_ABBR, K3Y_AREA) # Find gaps in the data
+
+
 
     # Sort the gaps by date and UTC time
     gaps.sort(key=lambda x: (x['Date'], datetime.strptime(x['Open Slot (UTC)'].split(' ')[0], "%H:%M")))
