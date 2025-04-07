@@ -1,9 +1,7 @@
 import requests
 from datetime import datetime, timedelta
-from html.parser import HTMLParser
 import json
 import logging
-import streamlit as st
 
 # Configure logging
 logging.basicConfig(
@@ -15,8 +13,13 @@ logging.basicConfig(
     ]
 )
 
+# Valid U.S. time zone abbreviations and their UTC offsets
+VALID_TIME_ZONES = {
+    "EST": -5, "CST": -6, "MST": -7, "PST": -8, "AKST": -9, 
+    "HAST": -10, "SST": -11, "CHST": 10
+}
+
 # Load settings from settings.json
-@st.cache_data(ttl=600)     # Cache settings to avoid reloading on each rerun
 def load_settings():
     try:
         with open('settings.json', 'r') as f:
@@ -33,30 +36,11 @@ def load_settings():
     logging.info("Settings loaded")
     return settings
 
-# Load configuration
-settings = load_settings()
-
-# Extract values from the loaded settings
-K3Y_AREA = settings['K3Y_AREA']
-TIME_ZONE_ABBR = settings['TIME_ZONE_ABBR']
-LOCAL_DAY_START = settings['LOCAL_DAY_START']
-LOCAL_DAY_END = settings['LOCAL_DAY_END']
-
-# URL and area for K3Y data
-URL = 'https://www.skccgroup.com/k3y/slot_list.php'
-
-# Valid U.S. time zone abbreviations and their UTC offsets
-VALID_TIME_ZONES = {
-    "EST": -5, "CST": -6, "MST": -7, "PST": -8, "AKST": -9, 
-    "HAST": -10, "SST": -11, "CHST": 10
-}
-
-# Validate the time zone abbreviation provided by the user
-if TIME_ZONE_ABBR not in VALID_TIME_ZONES:
-    raise ValueError(f"Invalid TIME_ZONE '{TIME_ZONE_ABBR}'. Must be one of: {', '.join(VALID_TIME_ZONES)}")
-
 # Convert local time to UTC using the time zone offset
 def convert_to_utc(local_time_str, time_zone_abbr):
+    if time_zone_abbr not in VALID_TIME_ZONES:
+        raise ValueError(f"Invalid TIME_ZONE '{time_zone_abbr}'. Must be one of: {', '.join(VALID_TIME_ZONES)}")
+    
     today = datetime.now()  # Get today's date
     local_hour, local_minute = map(int, local_time_str.split(":"))  # Parse the local time
 
@@ -75,6 +59,9 @@ def convert_to_utc(local_time_str, time_zone_abbr):
 
 # Convert UTC time to local time using the time zone offset
 def convert_to_local(utc_time_str, time_zone_abbr):
+    if time_zone_abbr not in VALID_TIME_ZONES:
+        raise ValueError(f"Invalid TIME_ZONE '{time_zone_abbr}'. Must be one of: {', '.join(VALID_TIME_ZONES)}")
+    
     try:
         utc_time = datetime.strptime(utc_time_str, "%H:%M")  # Parse UTC time
         offset = timedelta(hours=VALID_TIME_ZONES[time_zone_abbr])  # Get the time zone offset
@@ -84,20 +71,16 @@ def convert_to_local(utc_time_str, time_zone_abbr):
         return None
 
 # Fetch K3Y data from the website and parse the table manually
-# Cache the API call to prevent repeated network requests
-@st.cache_data(ttl=3600)  # Cache for 1 hour
 def fetch_k3y_data(url, area):
-    logging.info("Fetching data from website")
+    logging.info(f"Fetching data from website for area {area}")
 
     try:
         response = requests.get(url, timeout=10) # Send a request to fetch the page
         html_content = response.content.decode('utf-8')  # Decode to string
         response.raise_for_status()  # Raise exception for 4XX/5XX responses
     except requests.exceptions.RequestException as e:
-        st.error(f"Failed to fetch data: {str(e)}")
-        logging.info("Failed to fetch data from website")
+        logging.error(f"Failed to fetch data: {str(e)}")
         return []
-
 
     # Extract the table rows using a simple regular expression
     table_pattern = html_content.find('<table')
@@ -177,14 +160,13 @@ def generate_hours(start_time, end_time):
     return hours
 
 # Find gaps between scheduled times based on required ranges
-@st.cache_data(ttl=600)  # Cache for 10 minutes
-def find_gaps(data, required_ranges, time_zone_abbr, area):  # Add `area` as a parameter
+def find_gaps(data, required_ranges, time_zone_abbr, area):
     # Initialize a dictionary to track scheduled hours by date
     daily_hours = {}
 
     # Update daily hours with scheduled slots
-    for date, start, end, k3y_area in data:  # Ensure `k3y_area` is used here
-        if k3y_area == area:  # Filter by the selected area
+    for date, start, end, k3y_area in data:
+        if area in k3y_area:  # Filter by the selected area
             if date not in daily_hours:
                 daily_hours[date] = set()
             hours = generate_hours(start, end)  # Generate blocked hours
@@ -214,28 +196,34 @@ def find_gaps(data, required_ranges, time_zone_abbr, area):  # Add `area` as a p
                     })
     # Sort gaps by date and time
     gaps.sort(key=lambda x: (x['Date'], datetime.strptime(x['Open Slot (UTC)'].split(' ')[0], "%H:%M")))
-    return gaps  # return gaps as usual
-
-
-# Main function to fetch data, find gaps, and display results
-def main():
-    data = fetch_k3y_data(URL, K3Y_AREA)  # Fetch K3Y data from the website
-    required_ranges = [(convert_to_utc(LOCAL_DAY_START, TIME_ZONE_ABBR), 
-                        convert_to_utc(LOCAL_DAY_END, TIME_ZONE_ABBR))]  # Required time range in UTC
-    gaps = find_gaps(data, required_ranges, TIME_ZONE_ABBR, K3Y_AREA) # Find gaps in the data
     return gaps
 
+# Main function to fetch data, find gaps, and display results
+def get_open_slots(area, time_zone_abbr, local_day_start, local_day_end, url='https://www.skccgroup.com/k3y/slot_list.php'):
+    data = fetch_k3y_data(url, area)  # Fetch K3Y data from the website
+    required_ranges = [(convert_to_utc(local_day_start, time_zone_abbr), 
+                       convert_to_utc(local_day_end, time_zone_abbr))]  # Required time range in UTC
+    return find_gaps(data, required_ranges, time_zone_abbr, area)  # Find gaps in the data
+
+# Command-line interface
+if __name__ == "__main__":
+    settings = load_settings()
+    gaps = get_open_slots(
+        settings['K3Y_AREA'],
+        settings['TIME_ZONE_ABBR'],
+        settings['LOCAL_DAY_START'],
+        settings['LOCAL_DAY_END']
+    )
+    
     # Print results
     if gaps:
-        print(f"{'Date'}\t {'Open Slot (UTC)'}\t  {'Open Slot ({})'.format(TIME_ZONE_ABBR)}")
+        print(f"{'Date'}\t {'Open Slot (UTC)'}\t  {'Open Slot ({})'.format(settings['TIME_ZONE_ABBR'])}")
         previous_date = None
         for gap in gaps:
             if gap['Date'] != previous_date:
                 if previous_date is not None:
                     print()
                 previous_date = gap['Date']
-            print(f"{gap['Date']}\t {gap['Open Slot (UTC)']}\t  {gap[f'Open Slot ({TIME_ZONE_ABBR})']}")
-
-# Run the main function
-if __name__ == "__main__":
-    main()
+            print(f"{gap['Date']}\t {gap['Open Slot (UTC)']}\t  {gap[f'Open Slot ({settings['TIME_ZONE_ABBR']})']}")
+    else:
+        print("No open slots found for the specified time range.")
