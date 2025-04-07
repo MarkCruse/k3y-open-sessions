@@ -2,6 +2,7 @@ import streamlit as st
 import csv
 import io
 import json
+import time
 from k3y_open_time_slots import (
     load_settings, convert_to_utc, convert_to_local,
     fetch_k3y_data, find_gaps, get_open_slots, VALID_TIME_ZONES
@@ -82,6 +83,10 @@ if st.sidebar.button('Save Settings'):
 # Refresh button
 refresh = st.button("🔄 Refresh Data")
 
+# Initialize or update the editable key (used to force reset of checkboxes)
+if "editor_key" not in st.session_state:
+    st.session_state.editor_key = "editable_gaps_0"
+
 # Cache the gap results with optional clearing on refresh
 @st.cache_data(ttl=600)
 def get_cached_open_slots(timezone, area, start_local_str, end_local_str):
@@ -95,7 +100,16 @@ def get_cached_open_slots(timezone, area, start_local_str, end_local_str):
 # Clear cache if refresh is clicked
 if refresh:
     get_cached_open_slots.clear()
-    st.success("Data refreshed!")
+    msg_container = st.empty()  # Create a placeholder
+    msg_container.success("Data refreshed!")
+    time.sleep(1)              # Wait 10 seconds
+    msg_container.empty()       # Clear the message
+
+    # Increment editor key to force widget reinitialization
+    key_id = int(st.session_state.editor_key.split("_")[-1])
+    st.session_state.editor_key = f"editable_gaps_{key_id + 1}"
+
+    st.rerun()  # This will refresh the entire page, clearing all selections
 
 # Fetch and display gaps
 gaps = get_cached_open_slots(
@@ -141,24 +155,26 @@ if gaps:
         use_container_width=True,
         num_rows="fixed",
         hide_index=True,
-        key="editable_gaps"
+        key=st.session_state.editor_key
     )
 
     # Filter selected rows
     selected_rows = [
         row for row in edited_df if row["Select Time Slot"]
     ]
-
+        
     # Button to copy selected rows
     if st.button("📋 Copy Selected Rows"):
         if selected_rows:
+            email_body = "I would like to request the following operating slots:\n"
             # Format selected rows for clipboard
             formatted_rows = [
                 f"{row['Date']}\t {row['Open Slot (UTC)']}"
                 for row in selected_rows
             ]
-            st.code("\n".join(formatted_rows), language="text")
-            st.success(f"{len(selected_rows)} row(s) ready to copy. Click the copy icon in the code block above. Paste the copied rows into an email to your area coordinator/scheduler to request the dates/times.")
+            full_text = "\n".join([email_body, *formatted_rows])
+            st.code(full_text, language="text")
+            st.success(f"{len(selected_rows)} slot(s) selected. Click the ⧉ icon in the window above to copy. Paste into your email to request operating times.")
         else:
             st.warning("No rows selected!")
 
