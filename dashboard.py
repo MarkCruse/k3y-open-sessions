@@ -4,14 +4,12 @@ import io
 import datetime
 from k3y_open_time_slots import load_settings, fetch_k3y_data, find_gaps, convert_to_utc, convert_to_local
 import json
+import pyperclip  # Import pyperclip for clipboard copying
 
 # Load settings from file
 settings = load_settings()
 
 K3Y_AREA = settings['K3Y_AREA']
-
-# Title
-# st.title(f"K3Y Open Slot Finder - {K3Y_AREA}")
 
 # Sidebar configuration
 st.sidebar.header("Settings")
@@ -95,25 +93,50 @@ gaps = get_gaps_with_timezone(
 if gaps:
     st.write("### Available Open Slots")
 
-    gaps_data = []
-    for gap in gaps:
-        local_col = f"Open Slot ({selected_tz})"
-        if local_col in gap:
-            gaps_data.append({
-                "Date": gap["Date"],
-                "Open Slot (UTC)": gap["Open Slot (UTC)"],
-                local_col: gap[local_col]
-            })
+    local_col = f"Open Slot ({selected_tz})"
+    # Create base data with a selection column
+    gaps_data = [{
+        "Select Time Slot": False,
+        "Date": "1-"+gap["Date"],
+        "Open Slot (UTC)": gap["Open Slot (UTC)"],
+        local_col: gap[local_col]
+    } for gap in gaps if local_col in gap]
 
-    st.dataframe(gaps_data, use_container_width=True)
+    edited_df = st.data_editor(
+        gaps_data,
+        use_container_width=True,
+        num_rows="fixed",
+        hide_index=True,
+        key="editable_gaps"
+    )
+
+    # Filter selected rows
+    selected_rows = [
+        row for row in edited_df if row["Select Time Slot"]
+    ]
+
+    # Button to copy selected rows
+    if st.button("📋 Copy Selected Rows"):
+        if selected_rows:
+            # Format selected rows for clipboard
+            formatted_rows = [
+                f"{row['Date']}\t {row['Open Slot (UTC)']}"
+                for row in selected_rows
+            ]
+            st.code("\n".join(formatted_rows), language="text")
+            st.success(f"{len(selected_rows)} row(s) ready to copy (manually). Or click the ⧉ symbol to the right of the rows above. Paste the copied rows into an email to your area coordinator/scheduler to request the dates/times.")
+        else:
+            st.warning("No rows selected!")
 
     # Download CSV functionality
     def convert_to_csv(data):
         output = io.StringIO()
         if data:
-            writer = csv.DictWriter(output, fieldnames=data[0].keys())
+            fieldnames = [key for key in data[0].keys() if key != "Select Time Slot"]
+            writer = csv.DictWriter(output, fieldnames=fieldnames)
             writer.writeheader()
-            writer.writerows(data)
+            for row in data:
+                writer.writerow({k: v for k, v in row.items() if k != "Select Time Slot"})
         return output.getvalue().encode("utf-8")
 
     csv_data = convert_to_csv(gaps_data)
