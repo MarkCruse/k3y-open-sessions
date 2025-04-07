@@ -177,6 +177,7 @@ def generate_hours(start_time, end_time):
     return hours
 
 # Find gaps between scheduled times based on required ranges
+@st.cache_data(ttl=600)  # Cache for 10 minutes
 def find_gaps(data, required_ranges, time_zone_abbr, area):  # Add `area` as a parameter
     # Initialize a dictionary to track scheduled hours by date
     daily_hours = {}
@@ -211,7 +212,8 @@ def find_gaps(data, required_ranges, time_zone_abbr, area):  # Add `area` as a p
                         "Open Slot (UTC)": f"{hour} - {end_time.strftime('%H:%M')} UTC",
                         gap_label: f"{gap_start_local} - {gap_end_local}"
                     })
-
+    # Sort gaps by date and time
+    gaps.sort(key=lambda x: (x['Date'], datetime.strptime(x['Open Slot (UTC)'].split(' ')[0], "%H:%M")))
     return gaps  # return gaps as usual
 
 
@@ -220,12 +222,7 @@ def main():
     data = fetch_k3y_data(URL, K3Y_AREA)  # Fetch K3Y data from the website
     required_ranges = [(convert_to_utc(LOCAL_DAY_START, TIME_ZONE_ABBR), 
                         convert_to_utc(LOCAL_DAY_END, TIME_ZONE_ABBR))]  # Required time range in UTC
-    #gaps = find_gaps(data, required_ranges)  # Find gaps in the data
     gaps = find_gaps(data, required_ranges, TIME_ZONE_ABBR, K3Y_AREA) # Find gaps in the data
-
-    # Sort the gaps by date and UTC time
-    gaps.sort(key=lambda x: (x['Date'], datetime.strptime(x['Open Slot (UTC)'].split(' ')[0], "%H:%M")))
-
     return gaps
 
     # Print results
