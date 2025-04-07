@@ -100,42 +100,62 @@ def fetch_k3y_data(url, area):
 
 
     # Extract the table rows using a simple regular expression
+    table_pattern = html_content.find('<table')
     rows = []
-    table_start = html_content.find('<table')
-    table_end = html_content.find('</table>', table_start)
-    if table_start != -1 and table_end != -1:
-        table_html = html_content[table_start:table_end]
-        row_start = 0
+    
+    if table_pattern != -1:
+        table_end = html_content.find('</table>', table_pattern)
+        table_html = html_content[table_pattern:table_end]
+        
+        # Skip header row by finding the first row
+        header_end = table_html.find('</tr>') + 5
+        table_body = table_html[header_end:]
+        
+        # Extract rows using a more robust approach
+        current_pos = 0
         while True:
-            row_start = table_html.find('<tr>', row_start)
-            if row_start == -1:
+            tr_start = table_body.find('<tr', current_pos)
+            if tr_start == -1:
                 break
-            row_end = table_html.find('</tr>', row_start)
-            row_html = table_html[row_start + 4:row_end]  # Extract the row (skip <tr>)
+                
+            tr_start = table_body.find('>', tr_start) + 1  # Move to start of content
+            tr_end = table_body.find('</tr>', tr_start)
+            
+            if tr_end == -1:
+                break
+                
+            row_html = table_body[tr_start:tr_end]
             cells = []
-            cell_start = 0
+            
+            # Extract cells
+            cell_pos = 0
             while True:
-                cell_start = row_html.find('<td>', cell_start)
-                if cell_start == -1:
+                td_start = row_html.find('<td', cell_pos)
+                if td_start == -1:
                     break
-                cell_end = row_html.find('</td>', cell_start)
-                cell_html = row_html[cell_start + 4:cell_end]  # Extract the cell (skip <td>)
-                cells.append(cell_html.strip())
-                cell_start = cell_end + 5  # Move to the next cell
-            # Ensure there are exactly 4 columns in the row
+                    
+                td_start = row_html.find('>', td_start) + 1  # Move to start of content
+                td_end = row_html.find('</td>', td_start)
+                
+                if td_end == -1:
+                    break
+                    
+                cell_content = row_html[td_start:td_end].strip()
+                cells.append(cell_content)
+                cell_pos = td_end + 5
+            
             if len(cells) >= 4:
                 date = cells[0]
                 start_time = cells[1]
                 end_time = cells[2]
                 k3y_area = cells[3]
-                # Only keep rows that match the desired K3Y area
+                
                 if area in k3y_area:
                     rows.append((date, start_time, end_time, k3y_area))
-
-            row_start = row_end + 5  # Move to the next row
+            
+            current_pos = tr_end + 5
     
-    logging.debug(f"Processing {len(rows)} rows")
-
+    logging.info(f"Found {len(rows)} slots for {area}")
     return rows
 
 # Generate a list of full hour time slots between start_time and end_time
