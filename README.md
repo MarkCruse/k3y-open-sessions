@@ -53,13 +53,30 @@ To get started with K3Y Open Slot Finder, follow these steps:
    ```
 3. Install the required dependencies:
    ```bash
-   pip install -r requirements.txt
+   pip install streamlit requests
    ```
-4. Run the app:
+4. Save the New Environment
+   ```bash
+   pip freeze > requirements.txt
+   ```  
+5. Run as app:
    ```bash
    streamlit run dashboard.py
    ```
-
+6. Run locally at command prompt:
+   ```bash
+   python k3y_open_time_slots.py
+   ```
+7. Run locally at command prompt with parameters:
+   ```bash
+   python k3y_open_time_slots.py --time-zone CST --area K3Y/0 --start 08:00 --end 22:00
+   ```
+    **options for command line parameters**:  
+      -h, --help              show this help message and exit  
+      --time-zone TIME_ZONE   Time zone abbreviation (e.g., 'EST','CST','PST'...)   
+      --area AREA           K3Y area code (e.g., 'K3Y/0')  
+      --start START         Start time of the local day (e.g., '08:00')  
+      --end END             End time of the local day (e.g., '22:00')  
 
 ## Usage
 
@@ -90,15 +107,8 @@ Here’s an example of the settings.json file:
 ```
 
 ## Requirements
-- Python 3.x
 - Streamlit
-- Pandas
 - Requests
-
-To install the required libraries, run:
-```bash
-pip install -r requirements.txt
-```
 
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.
