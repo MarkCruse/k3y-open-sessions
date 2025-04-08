@@ -2,13 +2,31 @@ import requests
 from datetime import datetime, timedelta
 import json
 import logging
+import argparse
 
+# USING argparse
+# options:
+#   -h, --help            show this help message and exit
+#   --time-zone TIME_ZONE
+#                         Time zone abbreviation (e.g., 'EST').
+#   --area AREA           K3Y area code (e.g., 'K3Y/0').
+#   --start START         Start time of the local day (e.g., '08:00').
+#   --end END             End time of the local day (e.g., '22:00').
+# example: python k3y_open_time_slots.py --time-zone CST --area K3Y/0 --start 08:00 --end 22:00
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()
+    ]
+)
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("k3y_slots.log"),
+        #logging.FileHandler("k3y_slots.log"), #uncomment to write to file
         logging.StreamHandler()
     ]
 )
@@ -18,6 +36,32 @@ VALID_TIME_ZONES = {
     "EST": -5, "CST": -6, "MST": -7, "PST": -8, "AKST": -9, 
     "HAST": -10, "SST": -11, "CHST": 10
 }
+
+# Command-line argument parsing
+def parse_args():
+    parser = argparse.ArgumentParser(description="Fetch K3Y data and find available time slots.")
+    
+    # Optional arguments (defaults will be loaded from settings)
+    parser.add_argument("--time-zone", type=str, default=None, help="Time zone abbreviation (e.g., 'EST').")
+    parser.add_argument("--area", type=str, default=None, help="K3Y area code (e.g., 'K3Y/0').")
+    parser.add_argument("--start", type=str, default=None, help="Start time of the local day (e.g., '08:00').")
+    parser.add_argument("--end", type=str, default=None, help="End time of the local day (e.g., '22:00').")
+    
+    return parser.parse_args()
+
+# Update settings based on command-line args
+def update_settings_from_args(settings, args):
+    if args.time_zone:
+        settings["TIME_ZONE_ABBR"] = args.time_zone
+    if args.area:
+        settings["K3Y_AREA"] = args.area
+    if args.start:
+        settings["LOCAL_DAY_START"] = args.start
+    if args.end:
+        settings["LOCAL_DAY_END"] = args.end
+    
+    logging.info(f"Updated settings: {settings}")
+    return settings
 
 # Load settings from settings.json
 def load_settings():
@@ -55,7 +99,8 @@ def convert_to_utc(local_time_str, time_zone_abbr):
 
     # Convert to UTC by subtracting the offset
     utc_dt = local_dt - offset
-    return utc_dt.strftime("%H:%M")  # Return time in HH:MM format
+    utc_time = utc_dt.strftime("%H:%M")  # Return time in HH:MM format
+    return utc_time
 
 # Convert UTC time to local time using the time zone offset
 def convert_to_local(utc_time_str, time_zone_abbr):
@@ -66,7 +111,8 @@ def convert_to_local(utc_time_str, time_zone_abbr):
         utc_time = datetime.strptime(utc_time_str, "%H:%M")  # Parse UTC time
         offset = timedelta(hours=VALID_TIME_ZONES[time_zone_abbr])  # Get the time zone offset
         local_time = utc_time + offset  # Apply the offset to get local time
-        return local_time.strftime("%I:%M %p")  # Return time in 12-hour format
+        local_time_str = local_time.strftime("%I:%M %p")  # Return time in 12-hour format
+        return local_time_str
     except ValueError:
         return None
 
@@ -78,6 +124,7 @@ def fetch_k3y_data(url, area):
         response = requests.get(url, timeout=10) # Send a request to fetch the page
         html_content = response.content.decode('utf-8')  # Decode to string
         response.raise_for_status()  # Raise exception for 4XX/5XX responses
+        logging.info(f"Successfully fetched data from {url} for area {area}")
     except requests.exceptions.RequestException as e:
         logging.error(f"Failed to fetch data: {str(e)}")
         return []
@@ -194,6 +241,8 @@ def find_gaps(data, required_ranges, time_zone_abbr, area):
                         "Open Slot (UTC)": f"{hour} - {end_time.strftime('%H:%M')} UTC",
                         gap_label: f"{gap_start_local} - {gap_end_local}"
                     })
+    
+    logging.info(f"Found {len(gaps)} open slots for area {area}")
     # Sort gaps by date and time
     gaps.sort(key=lambda x: (x['Date'], datetime.strptime(x['Open Slot (UTC)'].split(' ')[0], "%H:%M")))
     return gaps
@@ -207,7 +256,17 @@ def get_open_slots(area, time_zone_abbr, local_day_start, local_day_end, url='ht
 
 # Command-line interface
 if __name__ == "__main__":
-    settings = load_settings()
+    args = parse_args()  # Parse command-line arguments
+
+    # Only log command-line arguments if they are provided
+    if any([args.time_zone, args.area, args.start, args.end]):
+        logging.info(f"Command-line arguments: {args}")
+    
+    settings = load_settings()  # Load default settings from JSON
+    
+    # Update settings with command-line args (if provided)
+    settings = update_settings_from_args(settings, args)
+
     gaps = get_open_slots(
         settings['K3Y_AREA'],
         settings['TIME_ZONE_ABBR'],
@@ -217,7 +276,7 @@ if __name__ == "__main__":
     
     # Print results
     if gaps:
-        print(f"{'Date'}\t {'Open Slot (UTC)'}\t  {'Open Slot ({})'.format(settings['TIME_ZONE_ABBR'])}")
+        print(f"\n{'Date'}\t {'Open Slot (UTC)'}\t  {'Open Slot ({})'.format(settings['TIME_ZONE_ABBR'])}")
         previous_date = None
         for gap in gaps:
             if gap['Date'] != previous_date:
@@ -226,4 +285,6 @@ if __name__ == "__main__":
                 previous_date = gap['Date']
             print(f"{gap['Date']}\t {gap['Open Slot (UTC)']}\t  {gap[f'Open Slot ({settings['TIME_ZONE_ABBR']})']}")
     else:
-        print("No open slots found for the specified time range.")
+        print("\nNo open slots found for the specified time range.")
+    print('\n')
+    logging.info(f"Completed processing for area {settings['K3Y_AREA']}")
