@@ -3,6 +3,7 @@
 ## Project Description
 
 The K3Y Open Slot Finder helps amateur radio operators track available time slots during the [SKCC Straight Key Month](https://www.skccgroup.com/k3y/k3y.php) event.  
+
 The app allows users to select a specific area, time zone, and displays available open slots within a user-defined time range. The app is designed to make it easy to find available slots for the K3Y event, which can be filtered and saved for later use.
 
 ## Features
@@ -22,12 +23,13 @@ This is the core logic file that:
 - Converts between UTC and local time zones
 - Fetches K3Y slot data from the SKCC website
 - Identifies open time slots based on user preferences
+- Supports execution from the command line and the Streamlit interface
 
 ### dashboard.py
 This is the Streamlit interface that:
 
-- Provides a user-friendly web UI for the slot finder
-- Allows users to select time zones, K3Y areas, and preferred hours
+- Provides a user-friendly web UI for the open time slots
+- Allows users to change time zones, K3Y areas, and preferred hours
 - Displays available slots in a table
 - Offers CSV export and clipboard copying features
 

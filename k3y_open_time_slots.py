@@ -14,13 +14,6 @@ import argparse
 #   --end END             End time of the local day (e.g., '22:00').
 # example: python k3y_open_time_slots.py --time-zone CST --area K3Y/0 --start 08:00 --end 22:00
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()
-    ]
-)
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
