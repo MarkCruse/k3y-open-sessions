@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import json
 import logging
 import argparse
+from bs4 import BeautifulSoup
 
 # USING argparse
 # options:
@@ -109,74 +110,40 @@ def convert_to_local(utc_time_str, time_zone_abbr):
     except ValueError:
         return None
 
-# Fetch K3Y data from the website and parse the table manually
+# Fetch K3Y data from the website using BeautifulSoup
 def fetch_k3y_data(url, area):
     logging.info(f"Fetching data from website for area {area}")
 
     try:
-        response = requests.get(url, timeout=10) # Send a request to fetch the page
-        html_content = response.content.decode('utf-8')  # Decode to string
+        response = requests.get(url, timeout=10)
         response.raise_for_status()  # Raise exception for 4XX/5XX responses
         logging.info(f"Successfully fetched data from {url} for area {area}")
     except requests.exceptions.RequestException as e:
         logging.error(f"Failed to fetch data: {str(e)}")
         return []
 
-    # Extract the table rows using a simple regular expression
-    table_pattern = html_content.find('<table')
+    # Parse the HTML content using BeautifulSoup
+    soup = BeautifulSoup(response.content, 'html.parser')
+    
+    # Find the table in the page
+    table = soup.find('table')
     rows = []
     
-    if table_pattern != -1:
-        table_end = html_content.find('</table>', table_pattern)
-        table_html = html_content[table_pattern:table_end]
+    if table:
+        # Skip the header row and get all data rows
+        data_rows = table.find_all('tr')[1:]  # Skip header row
         
-        # Skip header row by finding the first row
-        header_end = table_html.find('</tr>') + 5
-        table_body = table_html[header_end:]
-        
-        # Extract rows using a more robust approach
-        current_pos = 0
-        while True:
-            tr_start = table_body.find('<tr', current_pos)
-            if tr_start == -1:
-                break
-                
-            tr_start = table_body.find('>', tr_start) + 1  # Move to start of content
-            tr_end = table_body.find('</tr>', tr_start)
-            
-            if tr_end == -1:
-                break
-                
-            row_html = table_body[tr_start:tr_end]
-            cells = []
-            
-            # Extract cells
-            cell_pos = 0
-            while True:
-                td_start = row_html.find('<td', cell_pos)
-                if td_start == -1:
-                    break
-                    
-                td_start = row_html.find('>', td_start) + 1  # Move to start of content
-                td_end = row_html.find('</td>', td_start)
-                
-                if td_end == -1:
-                    break
-                    
-                cell_content = row_html[td_start:td_end].strip()
-                cells.append(cell_content)
-                cell_pos = td_end + 5
+        for row in data_rows:
+            cells = row.find_all('td')
             
             if len(cells) >= 4:
-                date = cells[0]
-                start_time = cells[1]
-                end_time = cells[2]
-                k3y_area = cells[3]
+                date = cells[0].text.strip()
+                start_time = cells[1].text.strip()
+                end_time = cells[2].text.strip()
+                k3y_area = cells[3].text.strip()
                 
                 if area in k3y_area:
                     rows.append((date, start_time, end_time, k3y_area))
-            
-            current_pos = tr_end + 5
     
     logging.info(f"Found {len(rows)} slots for {area}")
     return rows
