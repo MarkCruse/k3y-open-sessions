@@ -102,7 +102,7 @@ if refresh:
     get_cached_open_slots.clear()
     msg_container = st.empty()  # Create a placeholder
     msg_container.success("Data refreshed!")
-    time.sleep(1)              # Wait 10 seconds
+    time.sleep(1)              # Wait 1 second
     msg_container.empty()       # Clear the message
 
     # Increment editor key to force widget reinitialization
@@ -112,12 +112,18 @@ if refresh:
     st.rerun()  # This will refresh the entire page, clearing all selections
 
 # Fetch and display gaps
-gaps = get_cached_open_slots(
+gaps, update_info = get_cached_open_slots(
     timezone=selected_tz,
     area=selected_area,
     start_local_str=selected_day_start_str,
     end_local_str=selected_day_end_str
 )
+
+# Display update information if available
+if update_info:
+    # Clean up the update info by removing parentheses and "Update: " prefix
+    update_text = update_info.replace('(Update:', '').replace(')', '').strip()
+    st.write(f"###### SKCC OP Schedule last update: {update_text}")
 
 if gaps:
     st.write("### Available Open Slots")
@@ -134,7 +140,7 @@ if gaps:
     edited_df = st.data_editor(
         gaps_data,
         column_config={
-            "Select": st.column_config.CheckboxColumn(
+            "Select Time Slot": st.column_config.CheckboxColumn(
                 "Select",
                 help="Select time slots to copy",
                 width="small",
@@ -143,7 +149,7 @@ if gaps:
                 "Date",
                 width="small",
             ),
-            "UTC": st.column_config.TextColumn(
+            "Open Slot (UTC)": st.column_config.TextColumn(
                 "UTC Time",
                 width="medium",
             ),
