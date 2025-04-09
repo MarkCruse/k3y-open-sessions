@@ -113,6 +113,7 @@ def convert_to_local(utc_time_str, time_zone_abbr):
 # Fetch K3Y data from the website using BeautifulSoup
 def fetch_k3y_data(url, area):
     logging.info(f"Fetching data from website for area {area}")
+    update_info = None
 
     try:
         response = requests.get(url, timeout=10)
@@ -120,10 +121,28 @@ def fetch_k3y_data(url, area):
         logging.info(f"Successfully fetched data from {url} for area {area}")
     except requests.exceptions.RequestException as e:
         logging.error(f"Failed to fetch data: {str(e)}")
-        return []
+        return [], None
 
     # Parse the HTML content using BeautifulSoup
     soup = BeautifulSoup(response.content, 'html.parser')
+    
+    # Find the update information - look for <em> tags
+    em_tags = soup.find_all('em')
+    for em in em_tags:
+        if '(Update:' in em.text:
+            update_text = em.text.strip()
+            update_text = update_text.replace('(Update:', '').replace(')', '').strip()
+            update_info = update_text
+            break
+            
+    # Alternative: look for text containing '(Update:' if not found in <em> tags
+    if not update_info:
+        for element in soup.find_all(text=True):
+            if '(Update:' in element:
+                update_text = em.text.strip()
+                update_text = update_text.replace('(Update:', '').replace(')', '').strip()
+                update_info = update_text
+                break
     
     # Find the table in the page
     table = soup.find('table')
@@ -146,7 +165,7 @@ def fetch_k3y_data(url, area):
                     rows.append((date, start_time, end_time, k3y_area))
     
     logging.info(f"Found {len(rows)} slots for {area}")
-    return rows
+    return rows, update_info
 
 # Generate a list of full hour time slots between start_time and end_time
 def generate_hours(start_time, end_time):
@@ -209,10 +228,11 @@ def find_gaps(data, required_ranges, time_zone_abbr, area):
 
 # Main function to fetch data, find gaps, and display results
 def get_open_slots(area, time_zone_abbr, local_day_start, local_day_end, url='https://www.skccgroup.com/k3y/slot_list.php'):
-    data = fetch_k3y_data(url, area)  # Fetch K3Y data from the website
+    data, update_info = fetch_k3y_data(url, area)  # Fetch K3Y data from the website
     required_ranges = [(convert_to_utc(local_day_start, time_zone_abbr), 
                        convert_to_utc(local_day_end, time_zone_abbr))]  # Required time range in UTC
-    return find_gaps(data, required_ranges, time_zone_abbr, area)  # Find gaps in the data
+    gaps = find_gaps(data, required_ranges, time_zone_abbr, area)  # Find gaps in the data
+    return gaps, update_info
 
 # Command-line interface
 if __name__ == "__main__":
@@ -227,12 +247,16 @@ if __name__ == "__main__":
     # Update settings with command-line args (if provided)
     settings = update_settings_from_args(settings, args)
 
-    gaps = get_open_slots(
+    gaps, update_info = get_open_slots(
         settings['K3Y_AREA'],
         settings['TIME_ZONE_ABBR'],
         settings['LOCAL_DAY_START'],
         settings['LOCAL_DAY_END']
     )
+    
+    # Print update information if available
+    if update_info:
+        print(f"\nSKCC OP Schedule last update: {update_info} \n\nOpen Slots for area {settings['K3Y_AREA']}")
     
     # Print results
     if gaps:
