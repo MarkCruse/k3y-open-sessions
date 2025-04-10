@@ -15,117 +15,73 @@ st.set_page_config(
     layout="centered"
 )
 
-# Load settings from file
-@st.cache_data(ttl=600)
-def get_settings():
-    return load_settings()
+# Function to render the settings sidebar
+def render_settings_sidebar():
+    st.sidebar.header("Settings")
 
-settings = get_settings()
-
-# Sidebar configuration
-st.sidebar.header("Settings")
-
-# Time zone selector (overrides settings)
-time_zone_options = list(VALID_TIME_ZONES.keys())
-selected_tz = st.sidebar.selectbox(
-    "Select Time Zone",
-    options=time_zone_options,
-    index=time_zone_options.index(settings["TIME_ZONE_ABBR"]) if settings["TIME_ZONE_ABBR"] in time_zone_options else 0
-)
-
-# K3Y area selector
-k3y_area_options = [f"K3Y/{i}" for i in range(10)]
-selected_area = st.sidebar.selectbox(
-    "K3Y Area",
-    options=k3y_area_options,
-    index=k3y_area_options.index(settings["K3Y_AREA"]) if settings["K3Y_AREA"] in k3y_area_options else 0
-)
-
-# Update title based on selected K3Y area
-st.title(f"K3Y Open Slot Finder - {selected_area}")
-
-# Create a list of hours in 24-hour format
-hour_options = [f"{h:02d}:00" for h in range(24)]
-
-# Default selections based on settings values
-default_day_start_str = settings["LOCAL_DAY_START"]
-default_day_end_str = settings["LOCAL_DAY_END"]
-
-# Time range selectors
-selected_day_start_str = st.sidebar.selectbox(
-    "Day Start (24 hour format local time)", 
-    hour_options, 
-    index=hour_options.index(default_day_start_str) if default_day_start_str in hour_options else 8
-)
-
-selected_day_end_str = st.sidebar.selectbox(
-    "Day End (24 hour format local time)", 
-    hour_options, 
-    index=hour_options.index(default_day_end_str) if default_day_end_str in hour_options else 22
-)
-
-# Save settings button
-if st.sidebar.button('Save Settings'):
-    # Update settings dictionary
-    settings["TIME_ZONE_ABBR"] = selected_tz
-    settings["K3Y_AREA"] = selected_area
-    settings["LOCAL_DAY_START"] = selected_day_start_str
-    settings["LOCAL_DAY_END"] = selected_day_end_str
-
-    # Write to settings.json
-    with open('settings.json', 'w') as f:
-        json.dump(settings, f, indent=4)
-
-    # Clear cache to reload settings
-    get_settings.clear()
-    st.sidebar.success("Settings saved successfully!")
-
-# Refresh button
-refresh = st.button("🔄 Refresh Data")
-
-# Initialize or update the editable key (used to force reset of checkboxes)
-if "editor_key" not in st.session_state:
-    st.session_state.editor_key = "editable_gaps_0"
-
-# Cache the gap results with optional clearing on refresh
-@st.cache_data(ttl=600)
-def get_cached_open_slots(timezone, area, start_local_str, end_local_str):
-    return get_open_slots(
-        area=area,
-        time_zone_abbr=timezone,
-        local_day_start=start_local_str,
-        local_day_end=end_local_str
+    # Time zone selector (overrides settings)
+    time_zone_options = list(VALID_TIME_ZONES.keys())
+    selected_tz = st.sidebar.selectbox(
+        "Select Time Zone",
+        options=time_zone_options,
+        index=time_zone_options.index(settings["TIME_ZONE_ABBR"]) if settings["TIME_ZONE_ABBR"] in time_zone_options else 0
     )
 
-# Clear cache if refresh is clicked
-if refresh:
-    get_cached_open_slots.clear()
-    msg_container = st.empty()  # Create a placeholder
-    msg_container.success("Data refreshed!")
-    time.sleep(1)              # Wait 1 second
-    msg_container.empty()       # Clear the message
+    # K3Y area selector
+    k3y_area_options = [f"K3Y/{i}" for i in range(10)]
+    selected_area = st.sidebar.selectbox(
+        "K3Y Area",
+        options=k3y_area_options,
+        index=k3y_area_options.index(settings["K3Y_AREA"]) if settings["K3Y_AREA"] in k3y_area_options else 0
+    )
 
-    # Increment editor key to force widget reinitialization
-    key_id = int(st.session_state.editor_key.split("_")[-1])
-    st.session_state.editor_key = f"editable_gaps_{key_id + 1}"
+    # Create a list of hours in 24-hour format
+    hour_options = [f"{h:02d}:00" for h in range(24)]
 
-    st.rerun()  # This will refresh the entire page, clearing all selections
+    # Default selections based on settings values
+    default_day_start_str = settings["LOCAL_DAY_START"]
+    default_day_end_str = settings["LOCAL_DAY_END"]
 
-# Fetch and display gaps
-gaps, update_info = get_cached_open_slots(
-    timezone=selected_tz,
-    area=selected_area,
-    start_local_str=selected_day_start_str,
-    end_local_str=selected_day_end_str
-)
+    # Time range selectors
+    selected_day_start_str = st.sidebar.selectbox(
+        "Day Start (24 hour format local time)", 
+        hour_options, 
+        index=hour_options.index(default_day_start_str) if default_day_start_str in hour_options else 8,
+        help="Select the start time of your operating day"
+    )
 
-# Display update information if available
-if update_info:
-    # Clean up the update info by removing parentheses and "Update: " prefix
-    update_text = update_info.replace('(Update:', '').replace(')', '').strip()
-    st.write(f"###### SKCC OP Schedule last update: {update_text}")
+    selected_day_end_str = st.sidebar.selectbox(
+        "Day End (24 hour format local time)", 
+        hour_options, 
+        index=hour_options.index(default_day_end_str) if default_day_end_str in hour_options else 22,
+        help="Select the end time of your operating day"
+    )
 
-if gaps:
+    # Save settings button
+    if st.sidebar.button('Save Settings', help="Save current settings as defaults"):
+        # Update settings dictionary
+        settings["TIME_ZONE_ABBR"] = selected_tz
+        settings["K3Y_AREA"] = selected_area
+        settings["LOCAL_DAY_START"] = selected_day_start_str
+        settings["LOCAL_DAY_END"] = selected_day_end_str
+
+        # Write to settings.json
+        with open('settings.json', 'w') as f:
+            json.dump(settings, f, indent=4)
+
+        # Clear cache to reload settings
+        get_settings.clear()
+        st.sidebar.success("Settings saved successfully!")
+
+    # Return the selected values
+    return selected_tz, selected_area, selected_day_start_str, selected_day_end_str
+
+# Function to render the results table
+def render_results_table(gaps, selected_tz, key):
+    if not gaps:
+        st.info("No gaps found for selected time range!")
+        return []
+
     st.write("### Available Open Slots")
 
     local_col = f"Open Slot ({selected_tz})"
@@ -136,7 +92,7 @@ if gaps:
         "Open Slot (UTC)": gap["Open Slot (UTC)"],
         local_col: gap[local_col]
     } for gap in gaps if local_col in gap]
-
+    
     edited_df = st.data_editor(
         gaps_data,
         column_config={
@@ -148,29 +104,36 @@ if gaps:
             "Date": st.column_config.TextColumn(
                 "Date",
                 width="small",
+                help="The date of the open slot"
             ),
             "Open Slot (UTC)": st.column_config.TextColumn(
                 "UTC Time",
                 width="medium",
+                help="The time slot in UTC"
             ),
             local_col: st.column_config.TextColumn(
                 local_col,
                 width="medium",
+                help="The time slot in your local time zone"
             )
         },   
         use_container_width=True,
         num_rows="fixed",
         hide_index=True,
-        key=st.session_state.editor_key
+        key=key
     )
+    
+    return edited_df
 
+# Function to handle copying and downloading data
+def handle_data_actions(edited_df, gaps_data):
     # Filter selected rows
     selected_rows = [
         row for row in edited_df if row["Select Time Slot"]
     ]
         
     # Button to copy selected rows
-    if st.button("📋 Copy Selected Rows"):
+    if st.button("📋 Copy Selected Rows", help="Generate text for email requests"):
         if selected_rows:
             email_body = "I would like to request the following operating slots:\n"
             # Format selected rows for clipboard
@@ -200,10 +163,76 @@ if gaps:
         label="📥 Download table to CSV file",
         data=csv_data,
         file_name="k3y_open_slots.csv",
-        mime="text/csv"
+        mime="text/csv",
+        help="Download all slots to a CSV file"
     )
-else:
-    st.info("No gaps found for selected time range!")
+
+# Load settings from file
+@st.cache_data(ttl=600)
+def get_settings():
+    return load_settings()
+
+settings = get_settings()
+
+# Initialize or update the editable key (used to force reset of checkboxes)
+if "editor_key" not in st.session_state:
+    st.session_state.editor_key = "editable_gaps_0"
+
+# Cache the gap results with optional clearing on refresh
+@st.cache_data(ttl=600)
+def get_cached_open_slots(timezone, area, start_local_str, end_local_str):
+    try:
+        with st.spinner("Fetching open slots..."):
+            return get_open_slots(
+                area=area,
+                time_zone_abbr=timezone,
+                local_day_start=start_local_str,
+                local_day_end=end_local_str
+            )
+    except Exception as e:
+        st.error(f"Error fetching data: {str(e)}")
+        return [], None
+
+# Main application flow
+# Update title based on selected K3Y area
+selected_tz, selected_area, selected_day_start_str, selected_day_end_str = render_settings_sidebar()
+st.title(f"K3Y Open Slot Finder - {selected_area}")
+
+# Refresh button
+refresh = st.button("🔄 Refresh Data", help="Refresh data from the server")
+
+# Clear cache if refresh is clicked
+if refresh:
+    get_cached_open_slots.clear()
+    msg_container = st.empty()  # Create a placeholder
+    msg_container.success("Data refreshed!")
+    time.sleep(1)              # Wait 1 second
+    msg_container.empty()       # Clear the message
+
+    # Increment editor key to force widget reinitialization
+    key_id = int(st.session_state.editor_key.split("_")[-1])
+    st.session_state.editor_key = f"editable_gaps_{key_id + 1}"
+
+# Fetch and display gaps
+gaps, update_info = get_cached_open_slots(
+    timezone=selected_tz,
+    area=selected_area,
+    start_local_str=selected_day_start_str,
+    end_local_str=selected_day_end_str
+)
+
+# Display update information if available
+if update_info:
+    # Clean up the update info by removing parentheses and "Update: " prefix
+    update_text = update_info.replace('(Update:', '').replace(')', '').strip()
+    st.write(f"###### SKCC OP Schedule last update: {update_text}")
+
+# Render the results table
+edited_df = render_results_table(gaps, selected_tz, st.session_state.editor_key)
+
+if gaps:
+    # Handle data actions (copy/download)
+    handle_data_actions(edited_df, gaps)
 
 # Footer with information
 st.sidebar.markdown("---")
