@@ -2,102 +2,76 @@
 
 ## Project Description
 
-The K3Y Open Slot Finder helps amateur radio operators track available time slots during the [SKCC Straight Key Month](https://www.skccgroup.com/k3y/k3y.php) event.  
+The K3Y Open Slot Finder is a tool for SKCC K3Y operators to easily identify available time slots during the [SKCC Straight Key Month](https://www.skccgroup.com/k3y/k3y.php) event.  
 
-The app allows users to select a specific area, time zone, and displays available open slots within a user-defined time range. The app is designed to make it easy to find available slots for the K3Y event, which can be filtered and saved for later use.
+K3Y operators can select a region, adjust for their local time zone, and view open operating slots within a custom time window—making it simple to find and request times to participate.
 
 ## Features
 
 - **Time Zone Selection**: Choose the appropriate time zone.
-- **Select K3Y Area**: Filter available slots based on the selected K3Y area.
-- **View Available Time Slots**: Check open slots in the event schedule.
-- **Download Available Slots**: Export available time slots to a CSV file.
-- **Save Settings**: Save the time zone, K3Y area, and start/end time preferences for future use.
+- **Select K3Y Area**: Focus on a specific operating region.
+- **View Available Time Slots**: Display open operating times based on your selected criteria.
+- **Save Settings**: Save your time zone, K3Y area, and time range preferences for future use.
+- **Copy Selected Rows**: Copy selected time slots to your clipboard—perfect for pasting into an email or web form when requesting an operating time.
+- **CSV Export**: Download the filtered time slots as a CSV file for offline use or sharing.
 
-## File Analysis
-
-### k3y_open_time_slots.py  
-This is the core logic file that:  
-
-- Loads settings from a settings.json file
-- Converts between UTC and local time zones
-- Fetches K3Y slot data from the SKCC website
-- Identifies open time slots based on user preferences
-- Supports execution from the command line and the Streamlit interface
-
-### dashboard.py
-This is the Streamlit interface that:
-
-- Provides a user-friendly web UI for the open time slots
-- Allows users to change time zones, K3Y areas, and preferred hours
-- Displays available slots in a table
-- Offers CSV export and clipboard copying features
-
-### Key Features:
-
-- Settings sidebar with configuration options
-- Data caching to reduce web scraping frequency
-- Editable data table to select desired slots
-- Export functionality for sharing selected slots
 
 ## Installation
 
-To get started with K3Y Open Slot Finder, follow these steps:
+To get started with K3Y Open Slot Finder:
 
 1. Clone this repository:
    ```bash
    git clone https://github.com/MarkCruse/k3y-open-sessions.git
    cd k3y-open-sessions
-2. Set up a virtual environment (optional but recommended):
+2. (Optional) Create and activate a virtual environment:
    ```bash
    python -m venv .venv
    source .venv/bin/activate  # On Windows, use .venv\Scripts\activate
    ```
 3. Install the required dependencies:
    ```bash
-   pip install streamlit requests
-   ```
-4. Save the New Environment
+   pip install streamlit requests beautifulsoup4
+    ```
+4. (Optional) Save the environment
    ```bash
    pip freeze > requirements.txt
    ```  
-5. Run as app:
+
+## How to Use
+### Streamlit UI
+Launch the web interface:
    ```bash
    streamlit run dashboard.py
    ```
-6. Run locally at command prompt:
+   In the sidebar you can:
+   - Select your time zone
+   - Choose a K3Y area
+   - Define your preferred operating hours
+   - View and export open slots
+   - Copy selected rows to clipboard
+   - Save your settings for future use
+
+## Command-Line Interface
+Run with saved settings:
    ```bash
    python k3y_open_time_slots.py
    ```
-7. Run locally at command prompt with parameters:
+Run with custom parameters:
    ```bash
    python k3y_open_time_slots.py --time-zone CST --area K3Y/0 --start 08:00 --end 22:00
    ```
-    **options for command line parameters**:  
+   **Command-line options**:
+   ```bash
       -h, --help              show this help message and exit  
-      --time-zone TIME_ZONE   Time zone abbreviation (e.g., 'EST','CST','PST'...)   
+      --time-zone TIME_ZONE   Time zone abbreviation (e.g., 'EST','CST','PST')   
       --area AREA           K3Y area code (e.g., 'K3Y/0')  
       --start START         Start time of the local day (e.g., '08:00')  
       --end END             End time of the local day (e.g., '22:00')  
-
-## Usage
-
-**Select Time Zone**: In the sidebar, choose your desired time zone from the list.
-
-**Select K3Y Area**: Choose the K3Y area you want to filter available slots by.
-
-**Set Time Range**: Define the start and end times (in local time) for your search.
-
-**View Open Slots**: The available open slots will be displayed in a table.
-
-**Download CSV**: Download the results by clicking on the "📥 Download CSV" button.
-
-**Save Settings**: You can save your preferences (selected time zone, K3Y area, start/end times) for future use by clicking the "Save Settings" button.
+   ```
 
 ## Configuration File
-The settings are saved in settings.json. This file includes preferences such as the selected time zone, K3Y area, and start/end times for the day. You can modify the file directly if needed.
-
-Here’s an example of the settings.json file:
+Preferences are saved in a settings.json file:
 
    ```json
    {
@@ -107,10 +81,30 @@ Here’s an example of the settings.json file:
        "LOCAL_DAY_END": "22:00"
    }
 ```
+You can edit this file manually or save your selections via the Streamlit UI.
+
+## Code Structure
+
+### ```k3y_open_time_slots.py```  
+This is the core logic script that:  
+- Loads settings from a ```settings.json``` file
+- Converts UTC to view local times
+- Scrapes the K3Y Operator Schedule from the SKCC website
+- Identifies and prints open slots
+- Supports both command-line Streamlit usage
+
+### ```dashboard.py```
+This is the Streamlit interface that:
+   - Provides an intuitive user interface
+   - Offers time zone and area selectors
+   - Displays an interactive table of open slots
+   - Includes options to export, copy, and save data
+   - Uses caching to reduce unnecessary data fetching
 
 ## Requirements
-- Streamlit
-- Requests
+- ```streamlit```
+- ```requests```
+- ```beautifulsoup4```
 
 ## License
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License. See the ```LICENSE``` file for details.
