@@ -15,6 +15,15 @@ st.set_page_config(
     layout="centered"
 )
 
+# Function to initialize settings in session state
+def initialize_settings():
+    # Check if settings already exist in session state
+    if 'settings' not in st.session_state:
+        # Load from file
+        st.session_state.settings = load_settings()
+    
+    return st.session_state.settings
+
 # Function to render the settings sidebar
 def render_settings_sidebar():
     st.sidebar.header("Settings")
@@ -24,7 +33,7 @@ def render_settings_sidebar():
     selected_tz = st.sidebar.selectbox(
         "Select Time Zone",
         options=time_zone_options,
-        index=time_zone_options.index(settings["TIME_ZONE_ABBR"]) if settings["TIME_ZONE_ABBR"] in time_zone_options else 0
+        index=time_zone_options.index(st.session_state.settings["TIME_ZONE_ABBR"]) if st.session_state.settings["TIME_ZONE_ABBR"] in time_zone_options else 0
     )
 
     # K3Y area selector
@@ -32,15 +41,15 @@ def render_settings_sidebar():
     selected_area = st.sidebar.selectbox(
         "K3Y Area",
         options=k3y_area_options,
-        index=k3y_area_options.index(settings["K3Y_AREA"]) if settings["K3Y_AREA"] in k3y_area_options else 0
+        index=k3y_area_options.index(st.session_state.settings["K3Y_AREA"]) if st.session_state.settings["K3Y_AREA"] in k3y_area_options else 0
     )
 
     # Create a list of hours in 24-hour format
     hour_options = [f"{h:02d}:00" for h in range(24)]
 
     # Default selections based on settings values
-    default_day_start_str = settings["LOCAL_DAY_START"]
-    default_day_end_str = settings["LOCAL_DAY_END"]
+    default_day_start_str = st.session_state.settings["LOCAL_DAY_START"]
+    default_day_end_str = st.session_state.settings["LOCAL_DAY_END"]
 
     # Time range selectors
     selected_day_start_str = st.sidebar.selectbox(
@@ -60,18 +69,31 @@ def render_settings_sidebar():
     # Save settings button
     if st.sidebar.button('Save Settings', help="Save current settings as defaults"):
         # Update settings dictionary
-        settings["TIME_ZONE_ABBR"] = selected_tz
-        settings["K3Y_AREA"] = selected_area
-        settings["LOCAL_DAY_START"] = selected_day_start_str
-        settings["LOCAL_DAY_END"] = selected_day_end_str
-
-        # Write to settings.json
-        with open('settings.json', 'w') as f:
-            json.dump(settings, f, indent=4)
-
+        settings_to_save = {
+            "TIME_ZONE_ABBR": selected_tz,
+            "K3Y_AREA": selected_area,
+            "LOCAL_DAY_START": selected_day_start_str,
+            "LOCAL_DAY_END": selected_day_end_str
+        }
+        
+        # Save to session state
+        st.session_state.settings = settings_to_save
+        
+        # Try to write to settings.json (works locally, may fail on Cloud)
+        try:
+            with open('settings.json', 'w') as f:
+                json.dump(settings_to_save, f, indent=4)
+            file_saved = True
+        except Exception as e:
+            file_saved = False
+        
         # Clear cache to reload settings
-        get_settings.clear()
-        st.sidebar.success("Settings saved successfully!")
+        get_cached_open_slots.clear()
+        
+        if file_saved:
+            st.sidebar.success("Settings saved successfully to file and session!")
+        else:
+            st.sidebar.success("Settings saved for this session!")
 
     # Return the selected values
     return selected_tz, selected_area, selected_day_start_str, selected_day_end_str
@@ -167,12 +189,17 @@ def handle_data_actions(edited_df, gaps_data):
         help="Download all slots to a CSV file"
     )
 
-# Load settings from file
+# Load settings from session state or file
 @st.cache_data(ttl=600)
 def get_settings():
-    return load_settings()
+    if 'settings' in st.session_state:
+        return st.session_state.settings
+    else:
+        return initialize_settings()
 
-settings = get_settings()
+# Initialize settings in session state
+initialize_settings()
+settings = st.session_state.settings
 
 # Initialize or update the editable key (used to force reset of checkboxes)
 if "editor_key" not in st.session_state:
