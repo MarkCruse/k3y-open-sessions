@@ -10,7 +10,7 @@ from k3y_open_time_slots import (
 
 # Page configuration
 st.set_page_config(
-    page_title="K3Y Open Slot Finder",
+    page_title="K3Y Open Session Finder",
     page_icon="📅",
     layout="centered"
 )
@@ -104,7 +104,7 @@ def render_results_table(gaps, selected_tz, key):
         st.info("No gaps found for selected time range!")
         return []
 
-    st.write("### Available Open Slots")
+    st.write(f"#### Available K3Y Session Times for {selected_area}")
 
     local_col = f"Open Slot ({selected_tz})"
     # Create base data with a selection column
@@ -223,7 +223,7 @@ def get_cached_open_slots(timezone, area, start_local_str, end_local_str):
 # Main application flow
 # Update title based on selected K3Y area
 selected_tz, selected_area, selected_day_start_str, selected_day_end_str = render_settings_sidebar()
-st.title(f"K3Y Open Slot Finder - {selected_area}")
+st.title(f"K3Y Open Session Finder")
 
 # Refresh button
 refresh = st.button("🔄 Refresh Data", help="Refresh data from the server")
