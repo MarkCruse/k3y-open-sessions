@@ -165,7 +165,7 @@ def handle_data_actions(edited_df, gaps_data):
             ]
             full_text = "\n".join([email_body, *formatted_rows])
             st.code(full_text, language="text")
-            st.success(f"{len(selected_rows)} slot(s) selected. Click the ⧉ icon in the window above to copy. Paste into your email to request operating times.")
+            st.success(f"{len(selected_rows)} slot(s) selected. Copy the message above and paste it into your email when requesting operating times.")
         else:
             st.warning("No rows selected!")
 
