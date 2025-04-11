@@ -1,6 +1,6 @@
-# Contributing to K3Y Open Slot Finder
+# Contributing to K3Y Open Session Finder
 
-Thank you for your interest in contributing to the **K3Y Open Slot Finder** project!
+Thank you for your interest in contributing to the **K3Y Open Session Finder** project!
 
 This tool is designed to help SKCC K3Y operators identify available operating sessions during [Straight Key Month](https://www.skccgroup.com/k3y/k3y.php). Your input—whether through code, ideas, or feedback—can make a big difference.
 
@@ -86,5 +86,5 @@ Please be respectful, constructive, and kind. Let’s make contributing a positi
 
 ## Thank You
 
-Your interest in improving the K3Y Open Slot Finder is truly appreciated.  
+Your interest in improving the K3Y Open Session Finder is truly appreciated.  
 Every contribution counts—thank you for helping make this tool better for the SKCC community!

@@ -5,8 +5,6 @@
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
 [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/MarkCruse/k3y-open-sessions/issues)
 
-
-
 ## Project Description
 
 The K3Y Open Session Finder is a tool for SKCC K3Y operators to easily identify available time slots during the [SKCC Straight Key Month](https://www.skccgroup.com/k3y/k3y.php) event.  
