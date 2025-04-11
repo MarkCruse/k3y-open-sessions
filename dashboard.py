@@ -267,3 +267,6 @@ st.sidebar.markdown("### About")
 st.sidebar.markdown("""
 This tool helps you identify available time slots for K3Y operations. Simply choose your time zone, K3Y call area, and preferred operating hours to view open times. You can also select specific slots, copy them to your clipboard, and paste them into an email to your area coordinator or scheduler to request those dates and times.
 """)
+st.sidebar.markdown(
+    "Made for the SKCC community. View the source on [GitHub](https://github.com/MarkCruse/k3y-open-sessions)."
+)
