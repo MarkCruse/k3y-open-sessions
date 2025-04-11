@@ -1,4 +1,4 @@
-# K3Y Open Slot Finder
+# K3Y Open Session Finder
 
 [![Streamlit App](https://img.shields.io/badge/Streamlit-Live%20Demo-brightgreen?logo=streamlit)](https://k3y-open-sessions.streamlit.app/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -9,9 +9,9 @@
 
 ## Project Description
 
-The K3Y Open Slot Finder is a tool for SKCC K3Y operators to easily identify available time slots during the [SKCC Straight Key Month](https://www.skccgroup.com/k3y/k3y.php) event.  
+The K3Y Open Session Finder is a tool for SKCC K3Y operators to easily identify available time slots during the [SKCC Straight Key Month](https://www.skccgroup.com/k3y/k3y.php) event.  
 
-K3Y operators can select a region, adjust for their local time zone, and view open operating slots within a custom time window—making it simple to find and request times to participate.
+K3Y operators can select a region, adjust for their local time zone, and view open operating times within a custom time window—making it simple to find and request times to participate.
 
 ## Live Demo
 
@@ -33,7 +33,7 @@ This hosted version offers the full feature set, including time zone selection, 
 
 ## Installation
 
-To get started with K3Y Open Slot Finder:
+To get started with K3Y Open Session Finder:
 
 1. Clone this repository:
    ```bash
@@ -125,7 +125,7 @@ This is the Streamlit interface that:
 
 Contributions are welcome!
 
-If you'd like to help improve the K3Y Open Slot Finder, please see the [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines on how to get started.
+If you'd like to help improve the K3Y Open Session Finder, please see the [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines on how to get started.
 
 
 ## License
