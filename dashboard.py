@@ -157,7 +157,7 @@ def handle_data_actions(edited_df, gaps_data):
     # Button to copy selected rows
     if st.button("📋 Copy Selected Rows", help="Generate text for email requests"):
         if selected_rows:
-            email_body = "I would like to request the following operating slots:\n"
+            email_body = "I would like to request the following K3Y operating times:\n"
             # Format selected rows for clipboard
             formatted_rows = [
                 f"{row['Date']}\t {row['Open Slot (UTC)']}"
