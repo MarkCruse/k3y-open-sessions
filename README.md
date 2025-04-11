@@ -1,10 +1,25 @@
 # K3Y Open Slot Finder
 
+[![Streamlit App](https://img.shields.io/badge/Streamlit-Live%20Demo-brightgreen?logo=streamlit)](https://k3y-open-sessions.streamlit.app/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
+[![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/MarkCruse/k3y-open-sessions/issues)
+
+
+
 ## Project Description
 
 The K3Y Open Slot Finder is a tool for SKCC K3Y operators to easily identify available time slots during the [SKCC Straight Key Month](https://www.skccgroup.com/k3y/k3y.php) event.  
 
 K3Y operators can select a region, adjust for their local time zone, and view open operating slots within a custom time window—making it simple to find and request times to participate.
+
+## Live Demo
+
+You can try the app instantly using the **Streamlit Cloud-hosted version** — no installation required:
+
+**[Launch the K3Y Open Session Finder](https://k3y-open-sessions.streamlit.app/)**
+
+This hosted version offers the full feature set, including time zone selection, area filtering, session copying, and CSV export — all accessible from any modern web browser.
 
 ## Features
 
@@ -105,6 +120,16 @@ This is the Streamlit interface that:
 - ```streamlit```
 - ```requests```
 - ```beautifulsoup4```
+
+## Contributing
+
+Contributions, bug reports, and feature suggestions are welcome!
+
+If you'd like to contribute to this project, feel free to fork the repository and submit a pull request. You can also open an issue if you spot a bug or have an idea to improve the app.
+
+For major changes, please open a discussion first to make sure your idea fits the direction of the project.
+
+Thank you for helping improve the K3Y Open Slot Finder!
 
 ## License
 This project is licensed under the MIT License. See the ```LICENSE``` file for details.
