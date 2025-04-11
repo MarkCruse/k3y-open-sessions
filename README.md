@@ -123,13 +123,10 @@ This is the Streamlit interface that:
 
 ## Contributing
 
-Contributions, bug reports, and feature suggestions are welcome!
+Contributions are welcome!
 
-If you'd like to contribute to this project, feel free to fork the repository and submit a pull request. You can also open an issue if you spot a bug or have an idea to improve the app.
+If you'd like to help improve the K3Y Open Slot Finder, please see the [CONTRIBUTING.md](CONTRIBUTING.md) file for guidelines on how to get started.
 
-For major changes, please open a discussion first to make sure your idea fits the direction of the project.
-
-Thank you for helping improve the K3Y Open Slot Finder!
 
 ## License
 This project is licensed under the MIT License. See the ```LICENSE``` file for details.
