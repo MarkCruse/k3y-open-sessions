@@ -19,7 +19,7 @@ You can try the app instantly using the **Streamlit Cloud-hosted version** — n
 
 **[Launch the K3Y Open Session Finder](https://k3y-open-sessions.streamlit.app/)**
 
-This hosted version offers the full feature set, including time zone selection, area filtering, session copying, and CSV export — all accessible from any modern web browser.
+This hosted version offers the full feature set, including time zone selection, area filtering, session copying, and CSV export — all accessible from any modern web browser. Preferences and filters cannot be saved in the live demo. They will reset to default values each time the app is restarted.
 
 ## Features
 
