@@ -3,6 +3,7 @@ import csv
 import io
 import json
 import time
+from datetime import datetime
 from k3y_open_time_slots import (
     load_settings, convert_to_utc, convert_to_local,
     fetch_k3y_data, find_gaps, get_open_slots, VALID_TIME_ZONES
@@ -45,7 +46,11 @@ def render_settings_sidebar():
     )
 
     # Create a list of hours in 24-hour format
-    hour_options = [f"{h:02d}:00" for h in range(24)]
+    #hour_options = [f"{h:02d}:00" for h in range(24)]
+
+    # Create a list of hours in 12-hour AM/PM format
+    hour_options = [(datetime.strptime(f"{h:02d}:00", "%H:%M").strftime("%I:%M %p")) for h in range(24)]
+
 
     # Default selections based on settings values
     default_day_start_str = st.session_state.settings["LOCAL_DAY_START"]
@@ -95,8 +100,13 @@ def render_settings_sidebar():
         else:
             st.sidebar.success("Settings saved for this session!")
 
+
+    # Convert AM/PM string back to 24-hour format
+    day_start_24hr = datetime.strptime(selected_day_start_str, "%I:%M %p").strftime("%H:%M")
+    day_end_24hr = datetime.strptime(selected_day_end_str, "%I:%M %p").strftime("%H:%M")
     # Return the selected values
-    return selected_tz, selected_area, selected_day_start_str, selected_day_end_str
+    return selected_tz, selected_area, day_start_24hr, day_end_24hr
+
 
 # Function to render the results table
 def render_results_table(gaps, selected_tz, key):
