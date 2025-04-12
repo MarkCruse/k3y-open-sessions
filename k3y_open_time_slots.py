@@ -65,10 +65,10 @@ def load_settings():
     except FileNotFoundError:
         logging.info("Loading default settings - JSON file missing")
         settings = {
-            'TIME_ZONE_ABBR': 'EST',
-            'K3Y_AREA': 'K3Y/0',
-            'LOCAL_DAY_START': '08:00',
-            'LOCAL_DAY_END': '22:00'
+            'TIME_ZONE_ABBR': "EST",
+            'K3Y_AREA': "K3Y/4",
+            'LOCAL_DAY_START': "08:00 AM",
+            'LOCAL_DAY_END': "10:00 PM"
         }
     
     logging.info("Settings loaded")
