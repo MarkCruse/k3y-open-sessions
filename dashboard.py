@@ -16,6 +16,19 @@ st.set_page_config(
     layout="centered"
 )
 
+# Add CSS for tooltip border styling
+st.markdown("""
+<style>
+/* Add white border to tooltips */
+div[data-baseweb="tooltip"],
+div[role="tooltip"],
+.stTooltipIcon + div {
+    border: 2px solid white !important;
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.5) !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # Function to initialize settings in session state
 def initialize_settings():
     # Check if settings already exist in session state
@@ -60,19 +73,19 @@ def render_settings_sidebar():
     selected_day_start_str = st.sidebar.selectbox(
         "Day Start", 
         hour_options, 
-        index=hour_options.index(default_day_start_str) if default_day_start_str in hour_options else 8,
+        index=hour_options.index(default_day_start_str) if default_day_start_str in hour_options else "6:00 AM",
         help="Select the start time of your operating day"
     )
 
     selected_day_end_str = st.sidebar.selectbox(
         "Day End", 
         hour_options, 
-        index=hour_options.index(default_day_end_str) if default_day_end_str in hour_options else 22,
-        help="Select the end time of your operating day"
+        index=hour_options.index(default_day_end_str) if default_day_end_str in hour_options else "12:00 PM",
+        help="Select the end time of your operating day."
     )
 
     # Save settings button
-    if st.sidebar.button('Save Settings', help="Save current settings as defaults"):
+    if st.sidebar.button('Save Settings', help="Save current settings as defaults."):
         # Update settings dictionary
         settings_to_save = {
             "TIME_ZONE_ABBR": selected_tz,
@@ -114,7 +127,23 @@ def render_results_table(gaps, selected_tz, key):
         st.info("No gaps found for selected time range!")
         return []
 
-    st.write(f"#### Available K3Y Session Times for {selected_area}")
+    # Convert to AM/PM display format
+    start_ampm = datetime.strptime(selected_day_start_str, "%H:%M").strftime("%I:%M %p")
+    end_ampm = datetime.strptime(selected_day_end_str, "%H:%M").strftime("%I:%M %p")
+
+    #st.write(f"###### Available K3Y Session Times for:  **{selected_area}  {start_ampm}–{end_ampm} {selected_tz}**")
+    st.markdown(
+        f"""
+        <div style="font-family: system-ui, sans-serif; font-size:18px; font-weight:500;">
+            <p style="margin-bottom: 0;"><strong>
+                Available K3Y Session Times for: <span style="color:#99b4f2;">&nbsp;{selected_area}&nbsp;&nbsp;{start_ampm}-{end_ampm} {selected_tz}</span></strong>
+            </p>
+            <div style="height:10px;"></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+        help="Looking for different times? Use the sidebar to adjust time zone, area, and operating time range."
+    )
 
     local_col = f"Open Slot ({selected_tz})"
     # Create base data with a selection column
@@ -196,7 +225,7 @@ def handle_data_actions(edited_df, gaps_data):
         data=csv_data,
         file_name="k3y_open_slots.csv",
         mime="text/csv",
-        help="Download all slots to a CSV file"
+        help="Download all open sessions for the selected settings to a CSV file."
     )
 
 # Load settings from session state or file
@@ -236,7 +265,7 @@ selected_tz, selected_area, selected_day_start_str, selected_day_end_str = rende
 st.title(f"K3Y Open Session Finder")
 
 # Refresh button
-refresh = st.button("🔄 Refresh Data", help="Refresh data from the server")
+refresh = st.button("🔄 Refresh Data", help="Refresh data from the server.")
 
 # Clear cache if refresh is clicked
 if refresh:
@@ -262,7 +291,18 @@ gaps, update_info = get_cached_open_slots(
 if update_info:
     # Clean up the update info by removing parentheses and "Update: " prefix
     update_text = update_info.replace('(Update:', '').replace(')', '').strip()
-    st.write(f"###### SKCC OP Schedule last update: {update_text}")
+    #st.write(f"###### SKCC OP Schedule last update: {update_text}")
+    st.markdown(
+    f"""
+    <div style="font-family: system-ui, sans-serif; font-size:12px; font-weight:500;">
+        <p style="margin-bottom: 0;">
+            SKCC OP Schedule last update: <strong>&nbsp; {update_text}</strong>
+        </p>
+        <div style="height:20px;"></div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+    )
 
 # Render the results table
 edited_df = render_results_table(gaps, selected_tz, st.session_state.editor_key)
