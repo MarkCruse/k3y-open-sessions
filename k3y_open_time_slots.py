@@ -67,7 +67,7 @@ def load_settings():
         settings = {
             'TIME_ZONE_ABBR': "EST",
             'K3Y_AREA': "K3Y/4",
-            'LOCAL_DAY_START': "08:00 AM",
+            'LOCAL_DAY_START': "07:00 AM",
             'LOCAL_DAY_END': "10:00 PM"
         }
     
