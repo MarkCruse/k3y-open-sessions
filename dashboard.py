@@ -58,14 +58,14 @@ def render_settings_sidebar():
 
     # Time range selectors
     selected_day_start_str = st.sidebar.selectbox(
-        "Day Start (24 hour format local time)", 
+        "Day Start", 
         hour_options, 
         index=hour_options.index(default_day_start_str) if default_day_start_str in hour_options else 8,
         help="Select the start time of your operating day"
     )
 
     selected_day_end_str = st.sidebar.selectbox(
-        "Day End (24 hour format local time)", 
+        "Day End", 
         hour_options, 
         index=hour_options.index(default_day_end_str) if default_day_end_str in hour_options else 22,
         help="Select the end time of your operating day"
