@@ -163,9 +163,9 @@ def render_results_table(gaps, selected_tz, key):
                 width="small",
             ),
             "Date": st.column_config.TextColumn(
-                "Date",
+                "Date (UTC)",
                 width="small",
-                help="The date of the open slot"
+                help="The UTC date of the open slot"
             ),
             "Open Slot (UTC)": st.column_config.TextColumn(
                 "UTC Time",
