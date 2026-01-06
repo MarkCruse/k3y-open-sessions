@@ -272,3 +272,4 @@ if __name__ == "__main__":
         print("\nNo open slots found for the specified time range.")
     print('\n')
     logging.info(f"Completed processing for area {settings['K3Y_AREA']}")
+      
