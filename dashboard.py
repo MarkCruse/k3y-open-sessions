@@ -3,7 +3,7 @@ import csv
 import io
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from k3y_open_time_slots import (
     load_settings, convert_to_utc, convert_to_local,
     fetch_k3y_data, find_gaps, get_open_slots, VALID_TIME_ZONES
@@ -125,13 +125,11 @@ def render_settings_sidebar():
 def render_results_table(gaps, selected_tz, key):
     if not gaps:
         st.info("No gaps found for selected time range!")
-        return []
+        return [], []
 
-    # Convert to AM/PM display format
     start_ampm = datetime.strptime(selected_day_start_str, "%H:%M").strftime("%I:%M %p")
     end_ampm = datetime.strptime(selected_day_end_str, "%H:%M").strftime("%I:%M %p")
 
-    #st.write(f"###### Available K3Y Session Times for:  **{selected_area}  {start_ampm}–{end_ampm} {selected_tz}**")
     st.markdown(
         f"""
         <div style="font-family: system-ui, sans-serif; font-size:18px; font-weight:500;">
@@ -146,14 +144,28 @@ def render_results_table(gaps, selected_tz, key):
     )
 
     local_col = f"Open Slot ({selected_tz})"
-    # Create base data with a selection column
-    gaps_data = [{
-        "Select Time Slot": False,
-        "Date": gap["Date"],
-        "Open Slot (UTC)": gap["Open Slot (UTC)"],
-        local_col: gap[local_col]
-    } for gap in gaps if local_col in gap]
-    
+    local_label = f"Converted UTC to {selected_tz}"
+
+    gaps_data = []
+
+    offset_hours = VALID_TIME_ZONES[selected_tz]
+
+    for gap in gaps:
+        if "Open Slot (UTC)" not in gap:
+            continue
+        session_utc = f"{datetime.strptime(gap['Date'], '%m-%d').strftime('%a %b %d,')} {gap['Open Slot (UTC)']}"
+
+        utc_start_str, utc_end_str = gap["Open Slot (UTC)"].replace(" UTC", "").split(" - ")
+        start_local = datetime.strptime(f"{gap['Date']} {utc_start_str}", "%m-%d %H:%M") + timedelta(hours=offset_hours)
+        end_local = datetime.strptime(f"{gap['Date']} {utc_end_str}", "%m-%d %H:%M") + timedelta(hours=offset_hours)
+        local_str = f"{start_local.strftime('%a %b %d, %I:%M %p')} - {end_local.strftime('%I:%M %p')} {selected_tz}"
+
+        gaps_data.append({
+            "Select Time Slot": False,
+            "Session (UTC)": session_utc,
+            local_col: local_str
+        })
+
     edited_df = st.data_editor(
         gaps_data,
         column_config={
@@ -162,44 +174,35 @@ def render_results_table(gaps, selected_tz, key):
                 help="Select time slots to copy",
                 width="small",
             ),
-            "Date": st.column_config.TextColumn(
-                "Date (UTC)",
+            "Session (UTC)": st.column_config.TextColumn(
+                "Session (UTC)",
                 width="medium",
-                help="The UTC date of the open slot"
-            ),
-            "Open Slot (UTC)": st.column_config.TextColumn(
-                "UTC Time",
-                width="medium",
-                help="The time slot in UTC"
+                help="Date and time of the session in UTC"
             ),
             local_col: st.column_config.TextColumn(
-                local_col,
+                local_label,
                 width="medium",
-                help="The time slot in your local time zone"
+                help=f"Date and time of the session in your local time zone ({selected_tz})"
             )
-        },   
+        },
         use_container_width=True,
         num_rows="fixed",
         hide_index=True,
         key=key
     )
-    
-    return edited_df
+
+    return edited_df, gaps_data, local_col
 
 # Function to handle copying and downloading data
-def handle_data_actions(edited_df, gaps_data):
-    # Filter selected rows
-    selected_rows = [
-        row for row in edited_df if row["Select Time Slot"]
-    ]
+def handle_data_actions(edited_df, gaps_data, local_col):
+    selected_rows = [row for row in edited_df if row["Select Time Slot"]]
         
     # Button to copy selected rows
     if st.button("📋 Copy Selected Rows", help="Generate text for email requests"):
         if selected_rows:
             email_body = "I would like to request the following K3Y operating times:\n"
-            # Format selected rows for clipboard
             formatted_rows = [
-                f"{row['Date']}\t {row['Open Slot (UTC)']}"
+                f"{row['Session (UTC)']}\t {row[local_col]}"
                 for row in selected_rows
             ]
             full_text = "\n".join([email_body, *formatted_rows])
@@ -305,11 +308,11 @@ if update_info:
     )
 
 # Render the results table
-edited_df = render_results_table(gaps, selected_tz, st.session_state.editor_key)
+edited_df, gaps_data, local_col = render_results_table(gaps, selected_tz, st.session_state.editor_key)
 
-if gaps:
-    # Handle data actions (copy/download)
-    handle_data_actions(edited_df, gaps)
+if gaps_data:
+    handle_data_actions(edited_df, gaps_data, local_col)
+
 
 # Footer with information
 st.sidebar.markdown("---")
