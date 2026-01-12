@@ -123,6 +123,9 @@ def render_settings_sidebar():
 
 # Function to render the results table
 def render_results_table(gaps, selected_tz, key):
+
+    current_year = datetime.now().year  # only used for calculations
+
     if not gaps:
         st.info("No gaps found for selected time range!")
         return [], []
@@ -153,12 +156,20 @@ def render_results_table(gaps, selected_tz, key):
     for gap in gaps:
         if "Open Slot (UTC)" not in gap:
             continue
-        session_utc = f"{datetime.strptime(gap['Date'], '%m-%d').strftime('%a %b %d,')} {gap['Open Slot (UTC)']}"
+        #session_utc = f"{datetime.strptime(gap['Date'], '%m-%d').strftime('%a %b %d,')} {gap['Open Slot (UTC)']}"
+        session_utc = f"{datetime.strptime(f'{gap['Date']}-{current_year}', '%m-%d-%Y').strftime('%a %b %d,')} {gap['Open Slot (UTC)']}"
 
+
+        # Split UTC start/end times and remove " UTC"
         utc_start_str, utc_end_str = gap["Open Slot (UTC)"].replace(" UTC", "").split(" - ")
-        start_local = datetime.strptime(f"{gap['Date']} {utc_start_str}", "%m-%d %H:%M") + timedelta(hours=offset_hours)
-        end_local = datetime.strptime(f"{gap['Date']} {utc_end_str}", "%m-%d %H:%M") + timedelta(hours=offset_hours)
-        local_str = f"{start_local.strftime('%a %b %d, %I:%M %p')} - {end_local.strftime('%I:%M %p')} {selected_tz}"
+
+        # Convert to local time using offset and current year
+        start_local = datetime.strptime(f"{gap['Date']}-{current_year} {utc_start_str}", "%m-%d-%Y %H:%M") + timedelta(hours=offset_hours)
+        end_local   = datetime.strptime(f"{gap['Date']}-{current_year} {utc_end_str}", "%m-%d-%Y %H:%M") + timedelta(hours=offset_hours)
+
+        # Format for display WITHOUT the year, using a hyphen between times
+        local_str = f"{start_local.strftime('%a %b %d, %I:%M %p')}   {end_local.strftime('%I:%M %p')} {selected_tz}"
+
 
         gaps_data.append({
             "Select Time Slot": False,
