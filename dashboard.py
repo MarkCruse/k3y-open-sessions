@@ -42,6 +42,9 @@ def initialize_settings():
 def render_settings_sidebar():
     st.sidebar.header("Settings")
 
+    # DEBUG: Check the time zone keys
+    print("VALID_TIME_ZONES keys:", list(VALID_TIME_ZONES.keys()))
+    
     # Time zone selector (overrides settings)
     time_zone_options = list(VALID_TIME_ZONES.keys())
     selected_tz = st.sidebar.selectbox(
