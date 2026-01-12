@@ -168,7 +168,7 @@ def render_results_table(gaps, selected_tz, key):
         end_local   = datetime.strptime(f"{gap['Date']}-{current_year} {utc_end_str}", "%m-%d-%Y %H:%M") + timedelta(hours=offset_hours)
 
         # Format for display WITHOUT the year, using a hyphen between times
-        local_str = f"{start_local.strftime('%a %b %d, %I:%M %p')}   {end_local.strftime('%I:%M %p')} {selected_tz}"
+        local_str = f"{start_local.strftime('%a %b %d, %I:%M %p')} - {end_local.strftime('%I:%M %p')} {selected_tz}"
 
 
         gaps_data.append({
