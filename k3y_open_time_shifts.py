@@ -167,6 +167,38 @@ def fetch_k3y_data(url, area):
     logging.info(f"Found {len(rows)} slots for {area}")
     return rows, update_info
 
+# Fetch K3Y data from Github
+def fetch_k3y_data_new(area):
+    logging.info(f"Fetching data from Github for area {area}")
+    update_info = None
+
+    GITHUB_SCHEDULE_URL = (
+        "https://raw.githubusercontent.com/MarkCruse/"
+        "k3y-schedule-updater/main/data/schedule-cache.json"
+    )
+
+    resp = requests.get(GITHUB_SCHEDULE_URL, timeout=20)
+    resp.raise_for_status()
+
+    data = resp.json()
+    if not isinstance(data, list):
+        raise ValueError("schedule-cache.json must contain a list")
+
+    rows = [
+        (
+            d["session_date"],
+            d["utc_start"],
+            d["utc_end"],
+            d["k3y_area"],
+        )
+        for d in data
+    ]
+    #print(rows)
+
+    logging.info(f"Found {len(rows)} slots for {area}")
+    return rows, update_info
+
+
 # Generate a list of full hour time slots between start_time and end_time
 def generate_hours(start_time, end_time):
     start = datetime.strptime(start_time, "%H:%M")  # Convert start time to datetime object
@@ -216,12 +248,13 @@ def find_gaps(data, required_ranges, time_zone_abbr, area):
 
                     gap_label = f"Open Slot ({time_zone_abbr})"
                     gaps.append({
-                        "Date": f"1-{date}",
+                        "Date": f"{date}",
                         "Open Slot (UTC)": f"{hour} - {end_time.strftime('%H:%M')} UTC",
                         gap_label: f"{gap_start_local} - {gap_end_local}"
                     })
     
     logging.info(f"Found {len(gaps)} open slots for area {area}")
+    #logging.info(gaps[0])
     # Sort gaps by date and time
     gaps.sort(key=lambda x: (x['Date'], datetime.strptime(x['Open Slot (UTC)'].split(' ')[0], "%H:%M")))
     return gaps
@@ -229,6 +262,27 @@ def find_gaps(data, required_ranges, time_zone_abbr, area):
 # Main function to fetch data, find gaps, and display results
 def get_open_slots(area, time_zone_abbr, local_day_start, local_day_end, url='https://www.skccgroup.com/k3y/slot_list.php'):
     data, update_info = fetch_k3y_data(url, area)  # Fetch K3Y data from the website
+    required_ranges = [(convert_to_utc(local_day_start, time_zone_abbr), 
+                       convert_to_utc(local_day_end, time_zone_abbr))]  # Required time range in UTC
+    gaps = find_gaps(data, required_ranges, time_zone_abbr, area)  # Find gaps in the data
+    return gaps, update_info
+
+# Main function to fetch data, find gaps, and display results
+def get_open_slots_new(area, time_zone_abbr, local_day_start, local_day_end, url='https://www.skccgroup.com/k3y/slot_list.php'):
+    #data, update_info = fetch_k3y_data(url, area)  # Fetch K3Y data from the website
+    data, update_info = fetch_k3y_data_new(area)  # Fetch K3Y data from the website
+    required_ranges = [(convert_to_utc(local_day_start, time_zone_abbr), 
+                       convert_to_utc(local_day_end, time_zone_abbr))]  # Required time range in UTC
+    gaps = find_gaps(data, required_ranges, time_zone_abbr, area)  # Find gaps in the data
+    return gaps, update_info
+
+# Main function to_new(area, time_zone_abbr, local_day_start, local_day_end, url='https://www.skccgroup.com/k3y/slot_list.php'):
+    # data, update_info = fetch_k3y_data(url, area)  # Fetch K3Y data from the website
+    # required_ranges = [(convert_to_utc(local_day_start, time_zone_abbr), 
+    #                    convert_to_utc(local_day_end, time_zone_abbr))]  # Required time range in UTC
+    # gaps = find_gaps(data, required_ranges, time_zone_abbr, area)  # Find gaps in the data
+    # return gaps, update_info
+    data, update_info = fetch_k3y_data_new(area)  # Fetch K3Y data from the website
     required_ranges = [(convert_to_utc(local_day_start, time_zone_abbr), 
                        convert_to_utc(local_day_end, time_zone_abbr))]  # Required time range in UTC
     gaps = find_gaps(data, required_ranges, time_zone_abbr, area)  # Find gaps in the data

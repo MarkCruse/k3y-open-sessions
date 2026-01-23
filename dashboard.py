@@ -4,9 +4,9 @@ import io
 import json
 import time
 from datetime import datetime, timedelta
-from k3y_open_time_slots import (
+from k3y_open_time_shifts import (
     load_settings, convert_to_utc, convert_to_local,
-    fetch_k3y_data, find_gaps, get_open_slots, VALID_TIME_ZONES
+    fetch_k3y_data_new, find_gaps, get_open_slots_new, VALID_TIME_ZONES
 )
 
 # Page configuration
@@ -85,25 +85,25 @@ def render_settings_sidebar():
     )
 
     # Save button
-    if st.sidebar.button('Save Settings', help="Save current settings as defaults."):
-        settings_to_save = {
-            "TIME_ZONE_ABBR": selected_tz,
-            "K3Y_AREA": selected_area,
-            "LOCAL_DAY_START": selected_day_start_str,
-            "LOCAL_DAY_END": selected_day_end_str
-        }
-        st.session_state.settings = settings_to_save
-        try:
-            with open('settings.json', 'w') as f:
-                json.dump(settings_to_save, f, indent=4)
-            file_saved = True
-        except Exception:
-            file_saved = False
-        get_cached_open_slots.clear()
-        if file_saved:
-            st.sidebar.success("Settings saved successfully to file and session!")
-        else:
-            st.sidebar.success("Settings saved for this session!")
+    # if st.sidebar.button('Save Settings', help="Save current settings as defaults."):
+    #     settings_to_save = {
+    #         "TIME_ZONE_ABBR": selected_tz,
+    #         "K3Y_AREA": selected_area,
+    #         "LOCAL_DAY_START": selected_day_start_str,
+    #         "LOCAL_DAY_END": selected_day_end_str
+    #     }
+    #     st.session_state.settings = settings_to_save
+    #     try:
+    #         with open('settings.json', 'w') as f:
+    #             json.dump(settings_to_save, f, indent=4)
+    #         file_saved = True
+    #     except Exception:
+    #         file_saved = False
+    #     get_cached_open_slots.clear()
+    #     if file_saved:
+    #         st.sidebar.success("Settings saved successfully to file and session!")
+    #     else:
+    #         st.sidebar.success("Settings saved for this session!")
 
     day_start_24hr = datetime.strptime(selected_day_start_str, "%I:%M %p").strftime("%H:%M")
     day_end_24hr = datetime.strptime(selected_day_end_str, "%I:%M %p").strftime("%H:%M")
@@ -111,7 +111,7 @@ def render_settings_sidebar():
 
 # Render table
 def render_results_table(gaps, selected_tz, key):
-    current_year = datetime.now().year
+    #current_year = datetime.now().year
     if not gaps:
         st.info("No gaps found for selected time range!")
         return [], []
@@ -141,10 +141,10 @@ def render_results_table(gaps, selected_tz, key):
     for gap in gaps:
         if "Open Slot (UTC)" not in gap:
             continue
-        session_utc = f"{datetime.strptime(f'{gap['Date']}-{current_year}', '%m-%d-%Y').strftime('%a %b %d,')} {gap['Open Slot (UTC)']}"
+        session_utc = f"{datetime.strptime(f'{gap['Date']}', '%m/%d/%y').strftime('%a %b %d,')} {gap['Open Slot (UTC)']}"
         utc_start_str, utc_end_str = gap["Open Slot (UTC)"].replace(" UTC", "").split(" - ")
-        start_local = datetime.strptime(f"{gap['Date']}-{current_year} {utc_start_str}", "%m-%d-%Y %H:%M") + timedelta(hours=offset_hours)
-        end_local   = datetime.strptime(f"{gap['Date']}-{current_year} {utc_end_str}", "%m-%d-%Y %H:%M") + timedelta(hours=offset_hours)
+        start_local = datetime.strptime(f"{gap['Date']} {utc_start_str}", "%m/%d/%y %H:%M") + timedelta(hours=offset_hours)
+        end_local   = datetime.strptime(f"{gap['Date']} {utc_end_str}", "%m/%d/%y %H:%M") + timedelta(hours=offset_hours)
         local_str = f"{start_local.strftime('%a %b %d, %I:%M %p')} - {end_local.strftime('%I:%M %p')} {selected_tz}"
         gaps_data.append({
             "Select Time Slot": False,
@@ -224,7 +224,7 @@ def get_settings():
 def get_cached_open_slots(timezone, area, start_local_str, end_local_str):
     try:
         with st.spinner("Fetching open slots..."):
-            return get_open_slots(
+            return get_open_slots_new(
                 area=area,
                 time_zone_abbr=timezone,
                 local_day_start=start_local_str,
@@ -262,6 +262,7 @@ gaps, update_info = get_cached_open_slots(
 )
 
 if update_info:
+    update_text = ''
     update_text = update_info.replace('(Update:', '').replace(')', '').strip()
     st.markdown(
         f"""
@@ -276,6 +277,8 @@ if update_info:
     )
 
 edited_df, gaps_data, local_col = render_results_table(gaps, selected_tz, st.session_state.editor_key)
+
+
 if gaps_data:
     handle_data_actions(edited_df, gaps_data, local_col)
 
