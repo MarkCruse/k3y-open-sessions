@@ -193,7 +193,17 @@ def fetch_k3y_data_new(area):
         )
         for d in data
     ]
-    #print(rows)
+    # commit = data[0]
+
+    # timestamp = commit["commit"]["committer"]["date"]
+    # sha = commit["sha"]
+    # message = commit["commit"]["message"]
+
+    # dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+
+    # print(f"Last written: {dt} UTC")
+    # print(f"Commit: {sha}")
+    # print(f"Message: {message}")
 
     logging.info(f"Found {len(rows)} slots for {area}")
     return rows, update_info
