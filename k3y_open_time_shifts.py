@@ -202,13 +202,10 @@ def fetch_k3y_data_new(area):
     #     resp.raise_for_status()
     #     data = resp.json()
 
-    # --- Handle old + new formats ---
-    if isinstance(data, list):
-        records = data
-        generated_utc = None
-    else:
-        records = data["records"]
-        generated_utc = data.get("generated_utc")
+    # --- Handle new formats ---
+    
+    records = data["records"]
+    generated_utc = data.get("generated_utc")
 
     update_info = generated_utc
 
