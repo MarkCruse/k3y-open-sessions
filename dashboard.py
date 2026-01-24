@@ -268,7 +268,7 @@ if update_info:
         f"""
         <div style="font-family: system-ui, sans-serif; font-size:12px; font-weight:500;">
             <p style="margin-bottom: 0;">
-                SKCC OP Schedule last update: <strong>&nbsp; {update_text}</strong>
+                SKCC Op Schedule Calendar last update: <strong>&nbsp; {update_text}</strong>
             </p>
             <div style="height:20px;"></div>
         </div>

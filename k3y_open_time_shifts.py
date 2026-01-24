@@ -167,9 +167,16 @@ def fetch_k3y_data(url, area):
     logging.info(f"Found {len(rows)} slots for {area}")
     return rows, update_info
 
+import requests
+import logging
+
 # Fetch K3Y data from Github
+
+from pathlib import Path
+
+# Fetch K3Y data from Github (or local override)
 def fetch_k3y_data_new(area):
-    logging.info(f"Fetching data from Github for area {area}")
+    logging.info(f"Fetching data for area {area}")
     update_info = None
 
     GITHUB_SCHEDULE_URL = (
@@ -177,12 +184,33 @@ def fetch_k3y_data_new(area):
         "k3y-schedule-updater/main/data/schedule-cache.json"
     )
 
+    logging.info("Fetching schedule-cache.json from GitHub")
     resp = requests.get(GITHUB_SCHEDULE_URL, timeout=20)
     resp.raise_for_status()
-
     data = resp.json()
-    if not isinstance(data, list):
-        raise ValueError("schedule-cache.json must contain a list")
+
+    # local_path = Path("data/schedule-cache.json")
+
+    # # --- Temporary local override ---
+    # if local_path.exists():
+    #     logging.info("Using local schedule-cache.json")
+    #     with local_path.open("r", encoding="utf-8") as f:
+    #         data = json.load(f)
+    # else:
+    #     logging.info("Fetching schedule-cache.json from GitHub")
+    #     resp = requests.get(GITHUB_SCHEDULE_URL, timeout=20)
+    #     resp.raise_for_status()
+    #     data = resp.json()
+
+    # --- Handle old + new formats ---
+    if isinstance(data, list):
+        records = data
+        generated_utc = None
+    else:
+        records = data["records"]
+        generated_utc = data.get("generated_utc")
+
+    update_info = generated_utc
 
     rows = [
         (
@@ -191,21 +219,15 @@ def fetch_k3y_data_new(area):
             d["utc_end"],
             d["k3y_area"],
         )
-        for d in data
+        for d in records
+        if d["k3y_area"] == area
     ]
-    # commit = data[0]
 
-    # timestamp = commit["commit"]["committer"]["date"]
-    # sha = commit["sha"]
-    # message = commit["commit"]["message"]
+    logging.info(
+        f"Found {len(rows)} slots for {area}"
+        + (f" (cache generated {generated_utc} UTC)" if generated_utc else "")
+    )
 
-    # dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-
-    # print(f"Last written: {dt} UTC")
-    # print(f"Commit: {sha}")
-    # print(f"Message: {message}")
-
-    logging.info(f"Found {len(rows)} slots for {area}")
     return rows, update_info
 
 
