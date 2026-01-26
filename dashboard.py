@@ -3,10 +3,12 @@ import csv
 import io
 import json
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+# from k3y_open_time_shifts import (
+#     load_settings, convert_to_utc, convert_to_local,
+#     fetch_k3y_data, find_gaps, get_open_slots, VALID_TIME_ZONES
 from k3y_open_time_shifts import (
-    load_settings, convert_to_utc, convert_to_local,
-    fetch_k3y_data_new, find_gaps, get_open_slots_new, VALID_TIME_ZONES
+    load_settings, get_open_slots, VALID_TIME_ZONES
 )
 
 # Page configuration
@@ -84,27 +86,6 @@ def render_settings_sidebar():
         help="Select the end time of your operating day."
     )
 
-    # Save button
-    # if st.sidebar.button('Save Settings', help="Save current settings as defaults."):
-    #     settings_to_save = {
-    #         "TIME_ZONE_ABBR": selected_tz,
-    #         "K3Y_AREA": selected_area,
-    #         "LOCAL_DAY_START": selected_day_start_str,
-    #         "LOCAL_DAY_END": selected_day_end_str
-    #     }
-    #     st.session_state.settings = settings_to_save
-    #     try:
-    #         with open('settings.json', 'w') as f:
-    #             json.dump(settings_to_save, f, indent=4)
-    #         file_saved = True
-    #     except Exception:
-    #         file_saved = False
-    #     get_cached_open_slots.clear()
-    #     if file_saved:
-    #         st.sidebar.success("Settings saved successfully to file and session!")
-    #     else:
-    #         st.sidebar.success("Settings saved for this session!")
-
     day_start_24hr = datetime.strptime(selected_day_start_str, "%I:%M %p").strftime("%H:%M")
     day_end_24hr = datetime.strptime(selected_day_end_str, "%I:%M %p").strftime("%H:%M")
     return selected_tz, selected_area, day_start_24hr, day_end_24hr
@@ -138,9 +119,17 @@ def render_results_table(gaps, selected_tz, key):
 
     offset_hours = VALID_TIME_ZONES[selected_tz]
 
+    today_utc = datetime.now(timezone.utc).date()   #get current UTC day
+
     for gap in gaps:
         if "Open Slot (UTC)" not in gap:
+            continue    
+
+        # Only include days >= current UTC day
+        gap_date_utc = datetime.strptime(gap["Date"], "%m/%d/%y").date()
+        if gap_date_utc < today_utc:
             continue
+
         session_utc = f"{datetime.strptime(f'{gap['Date']}', '%m/%d/%y').strftime('%a %b %d,')} {gap['Open Slot (UTC)']}"
         utc_start_str, utc_end_str = gap["Open Slot (UTC)"].replace(" UTC", "").split(" - ")
         start_local = datetime.strptime(f"{gap['Date']} {utc_start_str}", "%m/%d/%y %H:%M") + timedelta(hours=offset_hours)
@@ -171,7 +160,7 @@ def render_results_table(gaps, selected_tz, key):
                 help=f"Date and time of the session in your local time zone ({selected_tz})"
             )
         },
-        use_container_width=True,
+        width='stretch',
         num_rows="fixed",
         hide_index=True,
         key=key
@@ -224,7 +213,7 @@ def get_settings():
 def get_cached_open_slots(timezone, area, start_local_str, end_local_str):
     try:
         with st.spinner("Fetching open slots..."):
-            return get_open_slots_new(
+            return get_open_slots(
                 area=area,
                 time_zone_abbr=timezone,
                 local_day_start=start_local_str,

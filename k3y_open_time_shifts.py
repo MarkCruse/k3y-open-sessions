@@ -4,6 +4,8 @@ import json
 import logging
 import argparse
 from bs4 import BeautifulSoup
+from pathlib import Path
+from zoneinfo import ZoneInfo
 
 # USING argparse
 # options:
@@ -110,73 +112,9 @@ def convert_to_local(utc_time_str, time_zone_abbr):
     except ValueError:
         return None
 
-# Fetch K3Y data from the website using BeautifulSoup
-def fetch_k3y_data(url, area):
-    logging.info(f"Fetching data from website for area {area}")
-    update_info = None
-
-    try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()  # Raise exception for 4XX/5XX responses
-        logging.info(f"Successfully fetched data from {url} for area {area}")
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Failed to fetch data: {str(e)}")
-        return [], None
-
-    # Parse the HTML content using BeautifulSoup
-    soup = BeautifulSoup(response.content, 'html.parser')
-    
-    # Find the update information - look for <em> tags
-    em_tags = soup.find_all('em')
-    for em in em_tags:
-        if '(Update:' in em.text:
-            update_text = em.text.strip()
-            update_text = update_text.replace('(Update:', '').replace(')', '').strip()
-            update_info = update_text
-            break
-            
-    # Alternative: look for text containing '(Update:' if not found in <em> tags
-    if not update_info:
-        for element in soup.find_all(text=True):
-            if '(Update:' in element:
-                update_text = em.text.strip()
-                update_text = update_text.replace('(Update:', '').replace(')', '').strip()
-                update_info = update_text
-                break
-    
-    # Find the table in the page
-    table = soup.find('table')
-    rows = []
-    
-    if table:
-        # Skip the header row and get all data rows
-        data_rows = table.find_all('tr')[1:]  # Skip header row
-        
-        for row in data_rows:
-            cells = row.find_all('td')
-            
-            if len(cells) >= 4:
-                date = cells[0].text.strip()
-                start_time = cells[1].text.strip()
-                end_time = cells[2].text.strip()
-                k3y_area = cells[3].text.strip()
-                
-                if area in k3y_area:
-                    rows.append((date, start_time, end_time, k3y_area))
-    
-    logging.info(f"Found {len(rows)} slots for {area}")
-    return rows, update_info
-
-import requests
-import logging
-
-# Fetch K3Y data from Github
-
-from pathlib import Path
-
 # Fetch K3Y data from Github (or local override)
-def fetch_k3y_data_new(area):
-    logging.info(f"Fetching data for area {area}")
+def fetch_k3y_data(area):
+    logging.info(f"Fetching data  {datetime.now(ZoneInfo('America/New_York')):%Y-%m-%d %H:%M:%S %Z}")
     update_info = None
 
     GITHUB_SCHEDULE_URL = (
@@ -184,26 +122,20 @@ def fetch_k3y_data_new(area):
         "k3y-schedule-updater/main/data/schedule-cache.json"
     )
 
-    logging.info("Fetching schedule-cache.json from GitHub")
-    resp = requests.get(GITHUB_SCHEDULE_URL, timeout=20)
-    resp.raise_for_status()
-    data = resp.json()
+    local_path = None
+    #local_path = Path("../k3y-schedule-updater/data/schedule-cache.json")  #uncomment to process local file and for testing
 
-    # local_path = Path("data/schedule-cache.json")
+    # --- Temporary local override ---
+    if local_path and local_path.exists():
+        logging.info("Using local schedule-cache.json")
+        with local_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+    else:
+        logging.info("Fetching schedule-cache.json from GitHub")
+        resp = requests.get(GITHUB_SCHEDULE_URL, timeout=20)
+        resp.raise_for_status()
+        data = resp.json()
 
-    # # --- Temporary local override ---
-    # if local_path.exists():
-    #     logging.info("Using local schedule-cache.json")
-    #     with local_path.open("r", encoding="utf-8") as f:
-    #         data = json.load(f)
-    # else:
-    #     logging.info("Fetching schedule-cache.json from GitHub")
-    #     resp = requests.get(GITHUB_SCHEDULE_URL, timeout=20)
-    #     resp.raise_for_status()
-    #     data = resp.json()
-
-    # --- Handle new formats ---
-    
     records = data["records"]
     generated_utc = data.get("generated_utc")
 
@@ -217,14 +149,15 @@ def fetch_k3y_data_new(area):
             d["k3y_area"],
         )
         for d in records
-        if d["k3y_area"] == area
     ]
 
     logging.info(
-        f"Found {len(rows)} slots for {area}"
+        f"Found {len(rows)} in the json data"
         + (f" (cache generated {generated_utc} UTC)" if generated_utc else "")
     )
-
+    with open("output.txt", "w", encoding="utf-8") as f:
+        for row in rows:
+            f.write(", ".join(str(x) for x in row) + "\n")
     return rows, update_info
 
 
@@ -283,39 +216,29 @@ def find_gaps(data, required_ranges, time_zone_abbr, area):
                     })
     
     logging.info(f"Found {len(gaps)} open slots for area {area}")
-    #logging.info(gaps[0])
-    # Sort gaps by date and time
+
+     # Sort gaps by date and time
     gaps.sort(key=lambda x: (x['Date'], datetime.strptime(x['Open Slot (UTC)'].split(' ')[0], "%H:%M")))
     return gaps
 
-# Main function to fetch data, find gaps, and display results
-def get_open_slots(area, time_zone_abbr, local_day_start, local_day_end, url='https://www.skccgroup.com/k3y/slot_list.php'):
-    data, update_info = fetch_k3y_data(url, area)  # Fetch K3Y data from the website
-    required_ranges = [(convert_to_utc(local_day_start, time_zone_abbr), 
-                       convert_to_utc(local_day_end, time_zone_abbr))]  # Required time range in UTC
-    gaps = find_gaps(data, required_ranges, time_zone_abbr, area)  # Find gaps in the data
-    return gaps, update_info
-
-# Main function to fetch data, find gaps, and display results
-def get_open_slots_new(area, time_zone_abbr, local_day_start, local_day_end, url='https://www.skccgroup.com/k3y/slot_list.php'):
+# Main function to find open time slots for the specified time ranges
+def get_open_slots(area, time_zone_abbr, local_day_start, local_day_end):
+    #, url='https://www.skccgroup.com/k3y/slot_list.php'):
     #data, update_info = fetch_k3y_data(url, area)  # Fetch K3Y data from the website
-    data, update_info = fetch_k3y_data_new(area)  # Fetch K3Y data from the website
+    data, update_info = fetch_k3y_data(area)  # Fetch K3Y data from the website
     required_ranges = [(convert_to_utc(local_day_start, time_zone_abbr), 
                        convert_to_utc(local_day_end, time_zone_abbr))]  # Required time range in UTC
     gaps = find_gaps(data, required_ranges, time_zone_abbr, area)  # Find gaps in the data
+    logging.info(f"Open slots are in: {local_day_start} - {local_day_end} {time_zone_abbr}")
+
     return gaps, update_info
 
 # Main function to_new(area, time_zone_abbr, local_day_start, local_day_end, url='https://www.skccgroup.com/k3y/slot_list.php'):
-    # data, update_info = fetch_k3y_data(url, area)  # Fetch K3Y data from the website
+    # data, update_info = fetch_k3y_data(area)  # Fetch K3Y data from the website
     # required_ranges = [(convert_to_utc(local_day_start, time_zone_abbr), 
     #                    convert_to_utc(local_day_end, time_zone_abbr))]  # Required time range in UTC
     # gaps = find_gaps(data, required_ranges, time_zone_abbr, area)  # Find gaps in the data
     # return gaps, update_info
-    data, update_info = fetch_k3y_data_new(area)  # Fetch K3Y data from the website
-    required_ranges = [(convert_to_utc(local_day_start, time_zone_abbr), 
-                       convert_to_utc(local_day_end, time_zone_abbr))]  # Required time range in UTC
-    gaps = find_gaps(data, required_ranges, time_zone_abbr, area)  # Find gaps in the data
-    return gaps, update_info
 
 # Command-line interface
 if __name__ == "__main__":
@@ -336,21 +259,30 @@ if __name__ == "__main__":
         settings['LOCAL_DAY_START'],
         settings['LOCAL_DAY_END']
     )
-    
+
     # Print update information if available
     if update_info:
         print(f"\nSKCC OP Schedule last update: {update_info} \n\nOpen Slots for area {settings['K3Y_AREA']}")
     
     # Print results
     if gaps:
-        print(f"\n{'Date'}\t {'Open Slot (UTC)'}\t  {'Open Slot ({})'.format(settings['TIME_ZONE_ABBR'])}")
+        print(f"\n\t {'Open Slot (UTC)'}\t\t\t\t\t\t{'Open Slot ({})'.format(settings['TIME_ZONE_ABBR'])}")
+        
         previous_date = None
         for gap in gaps:
             if gap['Date'] != previous_date:
                 if previous_date is not None:
                     print()
                 previous_date = gap['Date']
-            print(f"{gap['Date']}\t {gap['Open Slot (UTC)']}\t  {gap[f'Open Slot ({settings['TIME_ZONE_ABBR']})']}")
+            print(
+                f"{datetime.strptime(gap['Date'], '%m/%d/%y').strftime('%a %b %d')}, "
+                f"{gap['Open Slot (UTC)']:<22}"
+                f"convert to timezone ->   "
+                f"{datetime.strptime(gap['Date'], '%m/%d/%y').strftime('%a %b %d')}, "
+                f"{gap[f'Open Slot ({settings['TIME_ZONE_ABBR']})']} "
+                f"{settings['TIME_ZONE_ABBR']}"
+
+            )
     else:
         print("\nNo open slots found for the specified time range.")
     print('\n')
