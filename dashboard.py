@@ -92,31 +92,20 @@ def render_settings_sidebar():
 
 # Render table
 def render_results_table(gaps, selected_tz, key):
-    """
-    Render the table of available K3Y session times.
-
-    Returns:
-        edited_df: Streamlit editable DataFrame (or empty list if no gaps)
-        gaps_data: List of gap dictionaries
-        local_col: Name of the local timezone column (str)
-    """
     local_col = f"Open Slot ({selected_tz})"
     gaps_data = []
 
-    # If no gaps, show info and return 3 values
     if not gaps:
         st.info("No gaps found for selected time range!")
         return [], [], local_col
 
     offset_hours = VALID_TIME_ZONES[selected_tz]
-    today_utc = datetime.now(timezone.utc).date()  # Current UTC day
+    today_utc = datetime.now(timezone.utc).date()
 
-    # Build gaps_data
     for gap in gaps:
         if "Open Slot (UTC)" not in gap:
             continue
 
-        # Filter out past dates
         gap_date_utc = datetime.strptime(gap["Date"], "%m/%d/%y").date()
         if gap_date_utc < today_utc:
             continue
@@ -138,29 +127,27 @@ def render_results_table(gaps, selected_tz, key):
             local_col: local_str
         })
 
-    # If gaps_data is empty after filtering, return safely
     if not gaps_data:
         st.info("No available sessions match your time range.")
         return [], [], local_col
 
-    # Render editable table with integer pixel widths
+    # --- FIX: Remove 'width' from data_editor entirely ---
     edited_df = st.data_editor(
         gaps_data,
         column_config={
             "Select Time Slot": st.column_config.CheckboxColumn(
                 "Select",
-                width=80  # pixels
+                width=80
             ),
             "Session (UTC)": st.column_config.TextColumn(
                 "Session (UTC)",
-                width=200  # pixels
+                width=200
             ),
             local_col: st.column_config.TextColumn(
                 f"Converted UTC to {selected_tz}",
-                width=240  # pixels
+                width=240
             )
         },
-        width="stretch",      # table fills available space
         num_rows="fixed",
         hide_index=True,
         key=key
