@@ -93,10 +93,11 @@ def render_settings_sidebar():
 # Render table
 def render_results_table(gaps, selected_tz, key):
     #current_year = datetime.now().year
+    
     if not gaps:
         st.info("No gaps found for selected time range!")
-        return [], []
-
+        return [], [], None  # <-- Return 3 values
+    
     start_ampm = datetime.strptime(selected_day_start_str, "%H:%M").strftime("%I:%M %p")
     end_ampm = datetime.strptime(selected_day_end_str, "%H:%M").strftime("%I:%M %p")
 
