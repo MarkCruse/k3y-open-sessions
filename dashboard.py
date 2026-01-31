@@ -92,56 +92,59 @@ def render_settings_sidebar():
 
 # Render table
 def render_results_table(gaps, selected_tz, key):
-    #current_year = datetime.now().year
-    
-    if not gaps:
-        st.info("No gaps found for selected time range!")
-        return [], [], None  # <-- Return 3 values
-    
-    start_ampm = datetime.strptime(selected_day_start_str, "%H:%M").strftime("%I:%M %p")
-    end_ampm = datetime.strptime(selected_day_end_str, "%H:%M").strftime("%I:%M %p")
+    """
+    Render the table of available K3Y session times.
 
-    st.markdown(
-        f"""
-        <div style="font-family: system-ui, sans-serif; font-size:18px; font-weight:500;">
-            <p style="margin-bottom: 0;"><strong>
-                Available K3Y Session Times for: <span style="color:#99b4f2;">&nbsp;{selected_area}&nbsp;&nbsp;{start_ampm}-{end_ampm} {selected_tz}</span></strong>
-            </p>
-            <div style="height:10px;"></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-        help="Looking for different times? Use the sidebar to adjust time zone, area, and operating time range."
-    )
-
+    Returns:
+        edited_df: Streamlit editable DataFrame (or empty list if no gaps)
+        gaps_data: List of gaps dictionaries
+        local_col: Name of the local timezone column (str)
+    """
+    # Initialize
     local_col = f"Open Slot ({selected_tz})"
-    local_label = f"Converted UTC to {selected_tz}"
     gaps_data = []
 
+    # If no gaps, show info and return 3 values
+    if not gaps:
+        st.info("No gaps found for selected time range!")
+        return [], [], local_col
+
     offset_hours = VALID_TIME_ZONES[selected_tz]
+    today_utc = datetime.now(timezone.utc).date()   # Current UTC day
 
-    today_utc = datetime.now(timezone.utc).date()   #get current UTC day
-
+    # Build gaps_data
     for gap in gaps:
         if "Open Slot (UTC)" not in gap:
-            continue    
+            continue
 
-        # Only include days >= current UTC day
+        # Filter out past dates
         gap_date_utc = datetime.strptime(gap["Date"], "%m/%d/%y").date()
         if gap_date_utc < today_utc:
             continue
 
-        session_utc = f"{datetime.strptime(f'{gap['Date']}', '%m/%d/%y').strftime('%a %b %d,')} {gap['Open Slot (UTC)']}"
-        utc_start_str, utc_end_str = gap["Open Slot (UTC)"].replace(" UTC", "").split(" - ")
-        start_local = datetime.strptime(f"{gap['Date']} {utc_start_str}", "%m/%d/%y %H:%M") + timedelta(hours=offset_hours)
-        end_local   = datetime.strptime(f"{gap['Date']} {utc_end_str}", "%m/%d/%y %H:%M") + timedelta(hours=offset_hours)
-        local_str = f"{start_local.strftime('%a %b %d, %I:%M %p')} - {end_local.strftime('%I:%M %p')} {selected_tz}"
+        session_utc = f"{datetime.strptime(gap['Date'], '%m/%d/%y').strftime('%a %b %d,')} {gap['Open Slot (UTC)']}"
+
+        try:
+            utc_start_str, utc_end_str = gap["Open Slot (UTC)"].replace(" UTC", "").split(" - ")
+            start_local = datetime.strptime(f"{gap['Date']} {utc_start_str}", "%m/%d/%y %H:%M") + timedelta(hours=offset_hours)
+            end_local   = datetime.strptime(f"{gap['Date']} {utc_end_str}", "%m/%d/%y %H:%M") + timedelta(hours=offset_hours)
+            local_str = f"{start_local.strftime('%a %b %d, %I:%M %p')} - {end_local.strftime('%I:%M %p')} {selected_tz}"
+        except Exception as e:
+            local_str = "Error converting time"
+            st.warning(f"Failed to convert time for {gap['Date']}: {str(e)}")
+
         gaps_data.append({
             "Select Time Slot": False,
             "Session (UTC)": session_utc,
             local_col: local_str
         })
 
+    # If gaps_data is empty after filtering, return safely
+    if not gaps_data:
+        st.info("No available sessions match your time range.")
+        return [], [], local_col
+
+    # Render editable table
     edited_df = st.data_editor(
         gaps_data,
         column_config={
@@ -156,18 +159,19 @@ def render_results_table(gaps, selected_tz, key):
                 help="Date and time of the session in UTC"
             ),
             local_col: st.column_config.TextColumn(
-                local_label,
+                f"Converted UTC to {selected_tz}",
                 width="medium",
                 help=f"Date and time of the session in your local time zone ({selected_tz})"
             )
         },
-        width='stretch',
+        width="auto",           # Compatible with all Streamlit versions
         num_rows="fixed",
         hide_index=True,
         key=key
     )
 
     return edited_df, gaps_data, local_col
+
 
 # Handle copy/download
 def handle_data_actions(edited_df, gaps_data, local_col):
