@@ -33,14 +33,31 @@ div[role="tooltip"],
 
 # Initialize settings in session state
 def initialize_settings():
+    """
+    Load settings.json defaults, detect browser timezone on first load,
+    and set a valid timezone in session_state.
+    """
+    # Load defaults
     if 'settings' not in st.session_state:
         st.session_state.settings = load_settings()
 
-    # Detect browser timezone if settings are invalid
+    # Auto-detect browser timezone on first load only
+    if 'browserTimeZoneDetected' not in st.session_state:
+        try:
+            # This gets the browser timezone reported by Streamlit
+            browser_tz = st.session_state.get("browserTimeZone", "UTC")
+        except Exception:
+            browser_tz = "UTC"
+
+        # Override session settings if valid
+        if browser_tz in VALID_TIME_ZONES:
+            st.session_state.settings["TIME_ZONE_ABBR"] = browser_tz
+
+        st.session_state['browserTimeZoneDetected'] = True
+
+    # Validate timezone; fallback to UTC if invalid
     if st.session_state.settings.get("TIME_ZONE_ABBR") not in VALID_TIME_ZONES:
-        browser_tz = st.session_state.get("browserTimeZone", "UTC")
-        tz_match = next((tz for tz in VALID_TIME_ZONES.keys() if tz == browser_tz), "UTC")
-        st.session_state.settings["TIME_ZONE_ABBR"] = tz_match
+        st.session_state.settings["TIME_ZONE_ABBR"] = "UTC"
 
     return st.session_state.settings
 
@@ -48,16 +65,20 @@ def initialize_settings():
 def render_settings_sidebar():
     st.sidebar.header("Settings")
 
-    # Time zone selector
+    # --- Time zone selector ---
     time_zone_options = list(VALID_TIME_ZONES.keys())
     selected_tz = st.sidebar.selectbox(
         "Select Time Zone",
         options=time_zone_options,
         index=time_zone_options.index(st.session_state.settings["TIME_ZONE_ABBR"])
-              if st.session_state.settings["TIME_ZONE_ABBR"] in time_zone_options else 0
+              if st.session_state.settings["TIME_ZONE_ABBR"] in time_zone_options else 0,
+        help="Select your preferred timezone (auto-detected on first load)."
     )
 
-    # K3Y area selector
+    # Update session state if user changes it
+    st.session_state.settings["TIME_ZONE_ABBR"] = selected_tz
+
+    # --- K3Y area selector ---
     k3y_area_options = [f"K3Y/{i}" for i in range(10)]
     selected_area = st.sidebar.selectbox(
         "K3Y Area",
@@ -66,11 +87,10 @@ def render_settings_sidebar():
               if st.session_state.settings["K3Y_AREA"] in k3y_area_options else 0
     )
 
-    # Hours in AM/PM format
+    # --- Operating hours ---
     hour_options = [(datetime.strptime(f"{h:02d}:00", "%H:%M").strftime("%I:%M %p")) for h in range(24)]
-
     default_day_start_str = st.session_state.settings["LOCAL_DAY_START"]
-    default_day_end_str = st.session_state.settings["LOCAL_DAY_END"]
+    default_day_end_str   = st.session_state.settings["LOCAL_DAY_END"]
 
     selected_day_start_str = st.sidebar.selectbox(
         "Day Start",
@@ -86,8 +106,10 @@ def render_settings_sidebar():
         help="Select the end time of your operating day."
     )
 
+    # Convert to 24-hour format for later use
     day_start_24hr = datetime.strptime(selected_day_start_str, "%I:%M %p").strftime("%H:%M")
-    day_end_24hr = datetime.strptime(selected_day_end_str, "%I:%M %p").strftime("%H:%M")
+    day_end_24hr   = datetime.strptime(selected_day_end_str, "%I:%M %p").strftime("%H:%M")
+
     return selected_tz, selected_area, day_start_24hr, day_end_24hr
 
 # Render table
