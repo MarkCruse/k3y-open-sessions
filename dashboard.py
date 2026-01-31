@@ -226,6 +226,8 @@ def get_cached_open_slots(timezone, area, start_local_str, end_local_str):
 # Initialize session state
 initialize_settings()
 settings = st.session_state.settings
+settings = st.session_state.settings
+
 if "editor_key" not in st.session_state:
     st.session_state.editor_key = "editable_gaps_0"
 
