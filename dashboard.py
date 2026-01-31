@@ -4,6 +4,8 @@ import io
 import json
 import time
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+
 # from k3y_open_time_shifts import (
 #     load_settings, convert_to_utc, convert_to_local,
 #     fetch_k3y_data, find_gaps, get_open_slots, VALID_TIME_ZONES
@@ -33,31 +35,19 @@ div[role="tooltip"],
 
 # Initialize settings in session state
 def initialize_settings():
-    """
-    Load settings.json defaults, detect browser timezone on first load,
-    and set a valid timezone in session_state.
-    """
-    # Load defaults
     if 'settings' not in st.session_state:
         st.session_state.settings = load_settings()
 
-    # Auto-detect browser timezone on first load only
-    if 'browserTimeZoneDetected' not in st.session_state:
-        try:
-            # This gets the browser timezone reported by Streamlit
-            browser_tz = st.session_state.get("browserTimeZone", "UTC")
-        except Exception:
-            browser_tz = "UTC"
+    # Detect system timezone (works locally and on Cloud)
+    try:
+        # Get current local timezone name, e.g., 'EST' or 'EDT'
+        local_tz_name = time.tzname[time.localtime().tm_isdst]
+    except Exception:
+        local_tz_name = "UTC"
 
-        # Override session settings if valid
-        if browser_tz in VALID_TIME_ZONES:
-            st.session_state.settings["TIME_ZONE_ABBR"] = browser_tz
-
-        st.session_state['browserTimeZoneDetected'] = True
-
-    # Validate timezone; fallback to UTC if invalid
-    if st.session_state.settings.get("TIME_ZONE_ABBR") not in VALID_TIME_ZONES:
-        st.session_state.settings["TIME_ZONE_ABBR"] = "UTC"
+    # Only override if it's in our VALID_TIME_ZONES
+    if local_tz_name in VALID_TIME_ZONES:
+        st.session_state.settings["TIME_ZONE_ABBR"] = local_tz_name
 
     return st.session_state.settings
 
