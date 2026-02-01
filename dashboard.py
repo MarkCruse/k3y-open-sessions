@@ -4,8 +4,6 @@ import io
 import json
 import time
 from datetime import datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
-
 # from k3y_open_time_shifts import (
 #     load_settings, convert_to_utc, convert_to_local,
 #     fetch_k3y_data, find_gaps, get_open_slots, VALID_TIME_ZONES
@@ -38,16 +36,11 @@ def initialize_settings():
     if 'settings' not in st.session_state:
         st.session_state.settings = load_settings()
 
-    # Detect system timezone (works locally and on Cloud)
-    try:
-        # Get current local timezone name, e.g., 'EST' or 'EDT'
-        local_tz_name = time.tzname[time.localtime().tm_isdst]
-    except Exception:
-        local_tz_name = "UTC"
-
-    # Only override if it's in our VALID_TIME_ZONES
-    if local_tz_name in VALID_TIME_ZONES:
-        st.session_state.settings["TIME_ZONE_ABBR"] = local_tz_name
+    # Detect browser timezone if settings are invalid
+    if st.session_state.settings.get("TIME_ZONE_ABBR") not in VALID_TIME_ZONES:
+        browser_tz = st.session_state.get("browserTimeZone", "UTC")
+        tz_match = next((tz for tz in VALID_TIME_ZONES.keys() if tz == browser_tz), "UTC")
+        st.session_state.settings["TIME_ZONE_ABBR"] = tz_match
 
     return st.session_state.settings
 
@@ -55,20 +48,16 @@ def initialize_settings():
 def render_settings_sidebar():
     st.sidebar.header("Settings")
 
-    # --- Time zone selector ---
+    # Time zone selector
     time_zone_options = list(VALID_TIME_ZONES.keys())
     selected_tz = st.sidebar.selectbox(
         "Select Time Zone",
         options=time_zone_options,
         index=time_zone_options.index(st.session_state.settings["TIME_ZONE_ABBR"])
-              if st.session_state.settings["TIME_ZONE_ABBR"] in time_zone_options else 0,
-        help="Select your preferred timezone (auto-detected on first load)."
+              if st.session_state.settings["TIME_ZONE_ABBR"] in time_zone_options else 0
     )
 
-    # Update session state if user changes it
-    st.session_state.settings["TIME_ZONE_ABBR"] = selected_tz
-
-    # --- K3Y area selector ---
+    # K3Y area selector
     k3y_area_options = [f"K3Y/{i}" for i in range(10)]
     selected_area = st.sidebar.selectbox(
         "K3Y Area",
@@ -77,10 +66,11 @@ def render_settings_sidebar():
               if st.session_state.settings["K3Y_AREA"] in k3y_area_options else 0
     )
 
-    # --- Operating hours ---
+    # Hours in AM/PM format
     hour_options = [(datetime.strptime(f"{h:02d}:00", "%H:%M").strftime("%I:%M %p")) for h in range(24)]
+
     default_day_start_str = st.session_state.settings["LOCAL_DAY_START"]
-    default_day_end_str   = st.session_state.settings["LOCAL_DAY_END"]
+    default_day_end_str = st.session_state.settings["LOCAL_DAY_END"]
 
     selected_day_start_str = st.sidebar.selectbox(
         "Day Start",
@@ -96,10 +86,8 @@ def render_settings_sidebar():
         help="Select the end time of your operating day."
     )
 
-    # Convert to 24-hour format for later use
     day_start_24hr = datetime.strptime(selected_day_start_str, "%I:%M %p").strftime("%H:%M")
-    day_end_24hr   = datetime.strptime(selected_day_end_str, "%I:%M %p").strftime("%H:%M")
-
+    day_end_24hr = datetime.strptime(selected_day_end_str, "%I:%M %p").strftime("%H:%M")
     return selected_tz, selected_area, day_start_24hr, day_end_24hr
 
 # Render table
@@ -226,8 +214,6 @@ def get_cached_open_slots(timezone, area, start_local_str, end_local_str):
 # Initialize session state
 initialize_settings()
 settings = st.session_state.settings
-settings = st.session_state.settings
-
 if "editor_key" not in st.session_state:
     st.session_state.editor_key = "editable_gaps_0"
 
